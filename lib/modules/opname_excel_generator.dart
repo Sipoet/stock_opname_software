@@ -1,12 +1,36 @@
+// import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:excel/excel.dart';
 import 'package:stock_opname_software/extensions.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:downloadsfolder/downloadsfolder.dart' as df;
 
 mixin OpnameExcelGenerator {
+  int androidSdkInt = 0;
+  Future<bool> _checkPermission() async {
+    if (Platform.isAndroid) {
+      DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin();
+      final androidInfo = await deviceInfoPlugin.androidInfo;
+      androidSdkInt = androidInfo.version.sdkInt;
+      if (androidSdkInt <= 32) {
+        return await Permission.storage.request().isGranted;
+      } else {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  }
+
   Future<String?> generateExcel(OpnameSession opnameSession) async {
+    if (!await _checkPermission()) {
+      return null;
+    }
     var excel = Excel.createExcel();
     Sheet sheetObject = excel['Sheet1'];
 
@@ -42,19 +66,53 @@ mixin OpnameExcelGenerator {
       cell = sheetObject.cell(
           CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: index + 1));
       cell.value = TextCellValue(
-          "opname session at ${opnameSession.updatedAt.formatDate()}. last check at ${opnameItem.lastUpdated.formatDatetime()}");
+          "opname session at ${opnameSession.updatedAt.formatDate()}. last check at ${opnameItem.updatedAt.formatDatetime()}");
     }
     var fileBytes = excel.save();
-    Directory? directory = await getDownloadsDirectory();
-    if (fileBytes != null && directory != null) {
-      final fileLocation = p.join(directory.path,
-          'stock-opname-${opnameSession.updatedAt.dateIso()}.xlsx');
-      File(fileLocation)
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(fileBytes);
-      return fileLocation;
+    final filename = "stock-opname-${opnameSession.updatedAt.dateIso()}.xlsx";
+    String? fileLocation = await _findLocation(filename);
+
+    if (fileBytes != null && fileLocation != null) {
+      return _saveFile(fileLocation, fileBytes, filename);
     } else {
       return null;
     }
+  }
+
+  Future<String?> _saveFile(
+      String fileLocation, List<int> fileBytes, String filename) async {
+    late File file;
+    try {
+      file = File(fileLocation)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+      return fileLocation;
+    } catch (e) {
+      final dir = await getApplicationCacheDirectory();
+      final newFileLocation = p.join(dir.path, filename);
+      file = File(newFileLocation)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+      await df.copyFileIntoDownloadFolder(newFileLocation, filename,
+          file: file, desiredExtension: 'xlsx');
+      file.delete();
+      return fileLocation;
+    }
+  }
+
+  Future<String?> _findLocation(String filename) async {
+    Directory dir = await df.getDownloadDirectory();
+    if (Platform.isAndroid) {
+      // if (androidSdkInt > 32) {
+      //   dir = await getDownloadsDirectory() ?? dir;
+      // }
+      return p.join(dir.path, filename);
+    }
+    return await FilePicker.platform.saveFile(
+        dialogTitle: 'Simpan Excel opname di',
+        type: FileType.custom,
+        initialDirectory: dir.path,
+        allowedExtensions: ['xlsx'],
+        fileName: filename);
   }
 }

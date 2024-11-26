@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:stock_opname_software/models/application_record.dart';
 
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
+import 'package:stock_opname_software/thousand_separator_formatter.dart';
+
 import 'package:toastification/toastification.dart';
+import 'package:provider/provider.dart';
 
 class OpnameSessionFormPage extends StatefulWidget {
   final OpnameSession opnameSession;
@@ -21,46 +26,51 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   final _focusNode = FocusNode();
   final _qtyController = TextEditingController();
   final _itemCodeController = TextEditingController();
-
+  late final Database db;
+  bool _isFetchingItem = false;
+  bool opnameSessionChanged = false;
   @override
   void initState() {
+    db = context.read<Database>();
+    if (opnameSession.id != null) {
+      fetchOpnameItems();
+    }
     _focusNode.requestFocus();
     super.initState();
   }
 
+  void fetchOpnameItems() {
+    setState(() {
+      _isFetchingItem = true;
+    });
+    final db = context.read<Database>();
+    final orm = Orm(
+        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
+
+    orm
+        .finds<OpnameItem>(
+            convert: OpnameItem.convert,
+            filter: {'opname_session_id': opnameSession.id})
+        .then((opnameItems) => setState(() {
+              opnameSession.items = opnameItems;
+            }))
+        .whenComplete(() => setState(() {
+              _isFetchingItem = false;
+            }));
+  }
+
   @override
   Widget build(BuildContext context) {
-    opnameItems.sort((a, b) => b.lastUpdated.compareTo(a.lastUpdated));
+    opnameItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return Scaffold(
       appBar: AppBar(
         title: Text("Session at: ${opnameSession.updatedAt.formatDate()}"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
-          DropdownMenu<OpnameStatus>(
-              label: const Text('Status'),
-              initialSelection: opnameSession.status,
-              dropdownMenuEntries: OpnameStatus.values
-                  .map<DropdownMenuEntry<OpnameStatus>>((status) =>
-                      DropdownMenuEntry<OpnameStatus>(
-                          value: status, label: status.toString()))
-                  .toList()),
-          const SizedBox(
-            width: 10,
-          ),
-          DropdownMenu<String>(
-            label: const Text('Lokasi'),
-            initialSelection: opnameSession.location,
-            dropdownMenuEntries: const [
-              DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
-              DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
-            ],
-          ),
-          const SizedBox(
-            width: 10,
-          ),
-          ElevatedButton(
-              onPressed: () => _generateExcel(),
-              child: const Text('export Excel')),
+          IconButton(
+              onPressed: _generateExcel,
+              icon: const Icon(Icons.download),
+              tooltip: 'export Excel'),
           const SizedBox(
             width: 10,
           )
@@ -72,7 +82,41 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
         padding: const EdgeInsets.all(10.0),
         child: Center(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              DropdownMenu<OpnameStatus>(
+                label: const Text('Status'),
+                initialSelection: opnameSession.status,
+                width: 200,
+                dropdownMenuEntries: OpnameStatus.values
+                    .map<DropdownMenuEntry<OpnameStatus>>((status) =>
+                        DropdownMenuEntry<OpnameStatus>(
+                            value: status, label: status.toString()))
+                    .toList(),
+                onSelected: (value) {
+                  opnameSession.status = value ?? opnameSession.status;
+                  opnameSessionChanged = true;
+                },
+              ),
+              const SizedBox(
+                height: 10,
+              ),
+              DropdownMenu<String>(
+                label: const Text('Lokasi'),
+                width: 200,
+                initialSelection: opnameSession.location,
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
+                  DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
+                ],
+                onSelected: (value) {
+                  opnameSession.location = value ?? opnameSession.location;
+                  opnameSessionChanged = true;
+                },
+              ),
+              const SizedBox(
+                height: 20,
+              ),
               TextFormField(
                 focusNode: _focusNode,
                 controller: _itemCodeController,
@@ -86,51 +130,57 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                     icon: const Icon(Icons.clear),
                   ),
                 ),
+                keyboardType: TextInputType.visiblePassword,
                 inputFormatters: <TextInputFormatter>[
                   FilteringTextInputFormatter.allow(RegExp("[0-9a-zA-Z]")),
                 ],
                 onFieldSubmitted: (String? value) => _checkCode(value),
               ),
-              Expanded(
-                  child: ListView(
-                children: opnameItems
-                    .map<ListTile>((opnameItem) => ListTile(
-                          title: Text("Kode Item: ${opnameItem.itemCode}"),
-                          subtitle: Text(
-                              "Tanggal: ${opnameItem.lastUpdated.formatDatetime()}"),
-                          leading: Container(
-                            constraints: const BoxConstraints(minWidth: 50),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('QTY'),
-                                Text(
-                                  opnameItem.quantity.toString(),
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
+              Visibility(
+                visible: _isFetchingItem,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    semanticsLabel: 'fetch opname item',
+                  ),
+                ),
+              ),
+              Visibility(
+                visible: !_isFetchingItem,
+                child: Expanded(
+                    child: ListView(
+                  children: opnameItems
+                      .map<ListTile>((opnameItem) => ListTile(
+                            title: Text("Kode Item: ${opnameItem.itemCode}"),
+                            subtitle: Text(
+                                "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                            leading: Container(
+                              constraints: const BoxConstraints(minWidth: 50),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text('QTY'),
+                                  Text(
+                                    opnameItem.quantity.format(),
+                                    style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          trailing: IconButton(
-                              onPressed: () => _removeItem(opnameItem),
-                              icon: const Icon(Icons.close)),
-                        ))
-                    .toList(),
-              )),
+                            trailing: IconButton(
+                                onPressed: () => _removeItem(opnameItem),
+                                icon: const Icon(Icons.close)),
+                          ))
+                      .toList(),
+                )),
+              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _removeItem(opnameItem) {
-    setState(() {
-      opnameSession.items.remove(opnameItem);
-    });
   }
 
   void _generateExcel() {
@@ -159,7 +209,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     final focusNode2 = FocusNode();
     _openInputQuantityModal(value, focusNode: focusNode2).then((int? quantity) {
       if (quantity != null) {
-        _addOpnameItem(value, quantity);
+        _updateOpname(value, quantity);
         _qtyController.text = '';
         _itemCodeController.text = '';
       }
@@ -184,17 +234,38 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 child: Container(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      RichText(
+                        text: TextSpan(
+                          text: 'Kode Item : ',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontSize: 16),
+                          children: <TextSpan>[
+                            TextSpan(
+                                text: itemCode,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.normal)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(
+                        height: 10,
+                      ),
                       TextFormField(
                         controller: _qtyController,
                         focusNode: focusNode,
+                        keyboardType: TextInputType.number,
                         decoration:
                             const InputDecoration(label: Text('Jumlah')),
                         inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
+                          FilteringTextInputFormatter.digitsOnly,
+                          ThousandSeparatorFormatter(),
                         ],
-                        onFieldSubmitted: (value) =>
-                            Navigator.of(context).pop(int.tryParse(value)),
+                        onFieldSubmitted: (value) => Navigator.of(context)
+                            .pop(int.tryParse(value.replaceAll(',', ''))),
                       ),
                       const SizedBox(
                         height: 15,
@@ -202,8 +273,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       Row(
                         children: [
                           ElevatedButton(
-                              onPressed: () => Navigator.of(context)
-                                  .pop(int.tryParse(_qtyController.text)),
+                              onPressed: () => Navigator.of(context).pop(
+                                  int.tryParse(
+                                      _qtyController.text.replaceAll(',', ''))),
                               child: const Text('submit')),
                           const SizedBox(
                             width: 10,
@@ -224,7 +296,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   OpnameItem? findOpnameItem(String itemCode) {
     final opnameItem = opnameSession.items.firstWhere(
       (opnameItem) => opnameItem.itemCode == itemCode,
-      orElse: () => OpnameItem(),
+      orElse: () => OpnameItem(opnameSessionId: opnameSession.id ?? 0),
     );
     if (opnameItem.itemCode.isEmpty) {
       return null;
@@ -232,29 +304,82 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     return opnameItem;
   }
 
-  void _addOpnameItem(String itemCode, int quantity) {
+  void _updateOpname(String itemCode, int quantity) async {
+    if (opnameSession.id == null || opnameSessionChanged) {
+      final orm = Orm(
+          tableName: OpnameSession.tableName,
+          pkField: OpnameSession.pkField,
+          db: db);
+      opnameSession.id = await orm.save(opnameSession);
+      opnameSessionChanged = false;
+    }
     OpnameItem? opnameItem = findOpnameItem(itemCode);
     if (opnameItem == null) {
       _insertOpnameItem(itemCode, quantity);
     } else {
-      setState(() {
-        opnameItem.quantity += quantity;
-        opnameItem.lastUpdated = DateTime.now();
-      });
+      _updateOpnameItem(opnameItem, quantity);
     }
   }
 
-  void _insertOpnameItem(String itemCode, int quantity) {
-    setState(() {
-      opnameSession.items.add(OpnameItem(
-        itemCode: itemCode,
-        quantity: quantity,
-        lastUpdated: DateTime.now(),
-      ));
+  void _updateOpnameItem(OpnameItem opnameItem, int quantity) {
+    final orm = Orm(
+        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
+    final beforeUpdatedAt = opnameItem.updatedAt;
+    opnameItem.quantity += quantity;
+    opnameItem.updatedAt = DateTime.now();
+    orm.save(opnameItem).then(
+        (value) => setState(() {
+              opnameItem.quantity = opnameItem.quantity;
+            }), onError: (error) {
+      toastification.show(
+        type: ToastificationType.error,
+        title: Text('Failed update item ${opnameItem.itemCode}.'),
+        autoCloseDuration: const Duration(seconds: 5),
+      );
+      setState(() {
+        opnameItem.quantity -= quantity;
+        opnameItem.updatedAt = beforeUpdatedAt;
+      });
     });
+  }
+
+  void _insertOpnameItem(String itemCode, int quantity) {
+    final db = context.read<Database>();
+    final orm = Orm(
+        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
+    OpnameItem opnameItem = OpnameItem(
+      itemCode: itemCode,
+      quantity: quantity,
+      opnameSessionId: opnameSession.id ?? 0,
+      updatedAt: DateTime.now(),
+    );
+    orm.save(opnameItem).then(
+        (value) => setState(() {
+              opnameSession.items.add(opnameItem);
+            }),
+        onError: (error) => toastification.show(
+              type: ToastificationType.error,
+              title: Text('Failed insert item ${opnameItem.itemCode}.'),
+              autoCloseDuration: const Duration(seconds: 5),
+            ));
   }
 
   void _backToHome() {
     Navigator.of(context).pop();
+  }
+
+  void _removeItem(opnameItem) {
+    final db = context.read<Database>();
+    final orm = Orm(
+        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
+    orm.delete(opnameItem.id).then(
+        (value) => setState(() {
+              opnameSession.items.remove(opnameItem);
+            }),
+        onError: (error) => toastification.show(
+              type: ToastificationType.error,
+              title: Text('Failed remove item ${opnameItem.itemCode}.'),
+              autoCloseDuration: const Duration(seconds: 5),
+            ));
   }
 }

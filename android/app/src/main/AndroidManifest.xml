@@ -1,5 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- add storage permission -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" android:minSdkVersion="30"/>
+    <!-- Permissions options for the `accessMediaLocation` group -->
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+    <uses-permission android:name="android.permission.MANAGE_MEDIA" />
+
     <application
+        android:requestLegacyExternalStorage="true"
         android:label="stock_opname_software"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

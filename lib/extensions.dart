@@ -1,13 +1,32 @@
+import 'package:intl/intl.dart';
+
 extension FormatDatetime on DateTime {
   String formatDatetime() {
-    return "$day/$month/$year $hour:$minute";
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    return dateFormat.format(this);
   }
 
   String formatDate() {
-    return "$day/$month/$year";
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    return dateFormat.format(this);
   }
 
   String dateIso() {
-    return "$year-$month-$day";
+    final dateFormat = DateFormat('yyyy-MM-dd');
+    return dateFormat.format(this);
+  }
+}
+
+extension FormatNumberInt on int {
+  String format({String pattern = "#,###"}) {
+    final numberFormat = NumberFormat(pattern);
+    return numberFormat.format(this);
+  }
+}
+
+extension FormatNumberDouble on double {
+  String format({String pattern = "#,###"}) {
+    final numberFormat = NumberFormat(pattern);
+    return numberFormat.format(this);
   }
 }
