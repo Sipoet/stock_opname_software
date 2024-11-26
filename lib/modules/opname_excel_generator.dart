@@ -103,9 +103,6 @@ mixin OpnameExcelGenerator {
   Future<String?> _findLocation(String filename) async {
     Directory dir = await df.getDownloadDirectory();
     if (Platform.isAndroid) {
-      // if (androidSdkInt > 32) {
-      //   dir = await getDownloadsDirectory() ?? dir;
-      // }
       return p.join(dir.path, filename);
     }
     return await FilePicker.platform.saveFile(
