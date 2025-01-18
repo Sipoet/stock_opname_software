@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -29,6 +31,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   late final Database db;
   bool _isFetchingItem = false;
   bool opnameSessionChanged = false;
+  int safetyNetQTY = 100;
   @override
   void initState() {
     db = context.read<Database>();
@@ -170,7 +173,15 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                               ),
                             ),
                             trailing: IconButton(
-                                onPressed: () => _removeItem(opnameItem),
+                                onPressed: () {
+                                  confirmDialog(
+                                          'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
+                                      .then((isConfirmed) {
+                                    if (isConfirmed) {
+                                      _removeItem(opnameItem);
+                                    }
+                                  });
+                                },
                                 icon: const Icon(Icons.close)),
                           ))
                       .toList(),
@@ -180,6 +191,71 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
           ),
         ),
       ),
+    );
+  }
+
+  Future<bool> confirmDialog(String message,
+      {String agreeText = 'Ya',
+      String declineText = 'Tidak',
+      int delayedSubmitOnSeconds = 0}) {
+    String messageDelayed = delayedSubmitOnSeconds == 0
+        ? agreeText
+        : 'tunggu $delayedSubmitOnSeconds detik';
+    bool isInit = true;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter dialogSetState) {
+          if (isInit && messageDelayed != agreeText) {
+            Timer.periodic(const Duration(seconds: 1), (timer) {
+              final second = delayedSubmitOnSeconds - timer.tick;
+              dialogSetState(() {
+                if (second > 0) {
+                  messageDelayed = 'tunggu ${second.toString()} detik';
+                } else {
+                  messageDelayed = agreeText;
+                  timer.cancel();
+                }
+              });
+            });
+          }
+          isInit = false;
+          return AlertDialog(
+            content: Text(message),
+            actions: <Widget>[
+              TextButton(
+                child: Text(
+                  messageDelayed,
+                  style: TextStyle(
+                      color: messageDelayed == agreeText
+                          ? Colors.black
+                          : Colors.grey),
+                ),
+                onPressed: () {
+                  if (messageDelayed == agreeText) {
+                    Navigator.of(context).pop(true);
+                  }
+                },
+              ),
+              TextButton(
+                child: Text(declineText),
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    ).then(
+      (value) {
+        if (value == true) {
+          return true;
+        }
+        return false;
+      },
     );
   }
 
@@ -264,8 +340,8 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                           FilteringTextInputFormatter.digitsOnly,
                           ThousandSeparatorFormatter(),
                         ],
-                        onFieldSubmitted: (value) => Navigator.of(context)
-                            .pop(int.tryParse(value.replaceAll(',', ''))),
+                        onFieldSubmitted: (value) =>
+                            onSubmitted(focusNode, itemCode),
                       ),
                       const SizedBox(
                         height: 15,
@@ -273,9 +349,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       Row(
                         children: [
                           ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(
-                                  int.tryParse(
-                                      _qtyController.text.replaceAll(',', ''))),
+                              onPressed: () => onSubmitted(focusNode, itemCode),
                               child: const Text('submit')),
                           const SizedBox(
                             width: 10,
@@ -291,6 +365,26 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 ),
               ),
             ));
+  }
+
+  void onSubmitted(FocusNode? focusNode, String itemCode) {
+    int? qty = int.tryParse(_qtyController.text.replaceAll(',', ''));
+    if (qty != null && qty > safetyNetQTY) {
+      var navigator = Navigator.of(context);
+      confirmDialog(
+              'Apakah anda yakin kode item $itemCode jumlahnya ${_qtyController.text} ?',
+              delayedSubmitOnSeconds: 5)
+          .then((isConfirmed) {
+        if (isConfirmed) {
+          navigator.pop(qty);
+        } else {
+          _qtyController.text = '';
+          focusNode?.requestFocus();
+        }
+      });
+    } else {
+      Navigator.of(context).pop(qty);
+    }
   }
 
   OpnameItem? findOpnameItem(String itemCode) {
