@@ -27,7 +27,8 @@ mixin OpnameExcelGenerator {
     }
   }
 
-  Future<String?> generateExcel(OpnameSession opnameSession) async {
+  Future<String?> generateExcel(OpnameSession opnameSession,
+      {String? filename}) async {
     if (!await _checkPermission()) {
       return null;
     }
@@ -69,7 +70,7 @@ mixin OpnameExcelGenerator {
           "opname session at ${opnameSession.updatedAt.formatDate()}. last check at ${opnameItem.updatedAt.formatDatetime()}");
     }
     var fileBytes = excel.save();
-    final filename = "stock-opname-${opnameSession.updatedAt.dateIso()}.xlsx";
+    filename ??= "stock-opname-${opnameSession.updatedAt.dateIso()}.xlsx";
     String? fileLocation = await _findLocation(filename);
 
     if (fileBytes != null && fileLocation != null) {

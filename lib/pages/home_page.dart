@@ -4,6 +4,7 @@ import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/models/application_record.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 import 'package:stock_opname_software/pages/opname_session_form_page.dart';
+import 'package:stock_opname_software/pages/opname_session_combinator_page.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:toastification/toastification.dart';
 import 'package:provider/provider.dart';
@@ -20,9 +21,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with OpnameExcelGenerator {
   List<OpnameSession> opnameSessions = [];
   late final Database db;
+  String activePage = 'opnameSession';
+  late Widget activeWidget;
   @override
   void initState() {
     db = context.read<Database>();
+    activeWidget = opnameSessionView();
     fetchOpnameSession();
     super.initState();
   }
@@ -42,6 +46,38 @@ class _HomePageState extends State<HomePage> with OpnameExcelGenerator {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(children: [
+          const DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.blue,
+            ),
+            child: Text('Menu'),
+          ),
+          ListTile(
+            title: const Text('Opname Session'),
+            enabled: activePage != 'opnameSession',
+            onTap: () {
+              setState(() {
+                activeWidget = opnameSessionView();
+                activePage = 'opnameSession';
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+          ListTile(
+            title: const Text('Opname Session Combinator'),
+            enabled: activePage != 'opnameSessionCombinator',
+            onTap: () {
+              setState(() {
+                activeWidget = const OpnameSessionCombinatorPage();
+                activePage = 'opnameSessionCombinator';
+              });
+              Navigator.of(context).pop();
+            },
+          ),
+        ]),
+      ),
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
@@ -49,9 +85,10 @@ class _HomePageState extends State<HomePage> with OpnameExcelGenerator {
           IconButton(
               onPressed: fetchOpnameSession, icon: const Icon(Icons.refresh))
         ],
+        leading: const DrawerButton(),
       ),
       body: Center(
-        child: opnameSessionView(),
+        child: activeWidget,
 
         // opnameSessionView2(),
       ),
