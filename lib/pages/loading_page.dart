@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:stock_opname_software/modules/app_updater.dart';
 import 'package:stock_opname_software/pages/home_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as w;
 import 'package:provider/provider.dart';
@@ -14,13 +15,14 @@ class LoadingPage extends StatefulWidget {
   State<LoadingPage> createState() => _LoadingPageState();
 }
 
-class _LoadingPageState extends State<LoadingPage> {
+class _LoadingPageState extends State<LoadingPage> with AppUpdater {
   String progress = '';
   late final Database db;
   final dbName = 'app_db.sqlite3';
   @override
   void initState() {
-    prepareDatabase();
+    checkUpdate().then((isConfirmed) => prepareDatabase());
+
     super.initState();
   }
 

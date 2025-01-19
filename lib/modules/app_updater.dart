@@ -17,26 +17,32 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   late String localVersion;
   String _message = '';
   final dio = Dio();
-  void checkUpdate() async {
+  Future<bool> checkUpdate() async {
     if (kIsWeb) {
-      return;
+      return false;
     }
     TargetPlatform platform = defaultTargetPlatform;
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
     localVersion = packageInfo.version;
-    dio
+    return dio
         .get(
       'https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/pubspec.yaml',
     )
-        .then((response) {
+        .then((response) async {
       if ([200, 302].contains(response.statusCode)) {
         var doc = loadYaml(response.data);
         latestVersion = doc['version'];
         if (isOlderVersion()) {
-          _showConfirmDialog(platform);
+          await _showConfirmDialog(platform) ?? false;
+        } else {
+          return true;
         }
       }
-    }, onError: (error) => _defaultErrorResponse(error: error));
+      return false;
+    }, onError: (error) {
+      _defaultErrorResponse(error: error);
+      return false;
+    });
   }
 
   void _defaultErrorResponse({error}) {
@@ -48,6 +54,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   }
 
   bool isOlderVersion() {
+    return true;
     final localVersions =
         localVersion.split('.').map<int>((e) => int.parse(e)).toList();
     final latestVersions =
@@ -61,9 +68,9 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
     return false;
   }
 
-  void _showConfirmDialog(TargetPlatform platform) {
+  Future<bool?> _showConfirmDialog(TargetPlatform platform) {
     // show the dialog
-    showDialog(
+    return showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(builder: (context, setStateDialog) {
@@ -95,7 +102,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
               ElevatedButton(
                 child: const Text("Kembali"),
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(true);
                 },
               ),
               ElevatedButton(
@@ -104,9 +111,8 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
                   setStateDialog(() {
                     _isDownloading = true;
                   });
-                  Future.delayed(Duration.zero, () {
-                    downloadApp(platform, setStateDialog);
-                  });
+                  Future.delayed(Duration.zero,
+                      () => downloadApp(platform, setStateDialog));
                 },
               ),
             ],
@@ -118,9 +124,9 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
 
   final Map _downloadPath = {
     TargetPlatform.android:
-        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/android/allegra-pos.apk",
+        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/android/stock-opname.apk",
     TargetPlatform.windows:
-        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/windows/allegra-pos.exe"
+        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/windows/allegra_stock_opname.exe"
   };
 
   Future<String?> downloadPath(String extFile) {

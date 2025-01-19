@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/models/application_record.dart';
-import 'package:stock_opname_software/modules/app_updater.dart';
 import 'package:stock_opname_software/modules/list_menu.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 import 'package:stock_opname_software/pages/opname_session_form_page.dart';
@@ -18,14 +17,13 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with OpnameExcelGenerator, ListMenu, AppUpdater {
+    with OpnameExcelGenerator, ListMenu {
   List<OpnameSession> opnameSessions = [];
   late final Database db;
   @override
   void initState() {
     db = context.read<Database>();
     fetchOpnameSession();
-    checkUpdate();
     super.initState();
   }
 
