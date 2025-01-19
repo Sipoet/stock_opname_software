@@ -26,7 +26,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
     localVersion = packageInfo.version;
     dio
         .get(
-      'https://raw.githubusercontent.com/Sipoet/stock_opname_software/main/pubspec.yaml',
+      'https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/pubspec.yaml',
     )
         .then((response) {
       if ([200, 302].contains(response.statusCode)) {
@@ -41,7 +41,6 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
 
   void _defaultErrorResponse({error}) {
     toastification.dismissAll();
-    print(error.toString());
     toastification.show(
         type: ToastificationType.error,
         title: const Text('gagal update'),
