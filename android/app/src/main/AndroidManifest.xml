@@ -6,7 +6,7 @@
     <!-- Permissions options for the `accessMediaLocation` group -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.MANAGE_MEDIA" />
-
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:requestLegacyExternalStorage="true"
         android:label="stock_opname_software"
