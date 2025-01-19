@@ -54,7 +54,6 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   }
 
   bool isOlderVersion() {
-    return true;
     final localVersions =
         localVersion.split('.').map<int>((e) => int.parse(e)).toList();
     final latestVersions =
