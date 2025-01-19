@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
+import 'package:stock_opname_software/modules/list_menu.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 
 class OpnameSessionCombinatorPage extends StatefulWidget {
@@ -18,7 +19,8 @@ class OpnameSessionCombinatorPage extends StatefulWidget {
 }
 
 class _OpnameSessionCombinatorPageState
-    extends State<OpnameSessionCombinatorPage> with OpnameExcelGenerator {
+    extends State<OpnameSessionCombinatorPage>
+    with OpnameExcelGenerator, ListMenu {
   late final Database db;
   Map<String, OpnameItem> masterContainers = {};
   String? location;
@@ -31,43 +33,65 @@ class _OpnameSessionCombinatorPageState
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Center(
-        child: Card(
-          child: Column(
-            children: [
-              ElevatedButton(
-                onPressed: _pickFiles,
-                child: const Text('Pick File'),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              SizedBox(
-                height: 300,
-                child: ListView(
-                  children: files
-                      .map<ListTile>((file) => ListTile(
-                            subtitle: Text(file.path),
-                            trailing: IconButton(
-                                onPressed: () => setState(() {
-                                      files.remove(file);
-                                    }),
-                                icon: const Icon(Icons.close)),
-                          ))
-                      .toList(),
+    double height = MediaQuery.sizeOf(context).height;
+    var padding = MediaQuery.paddingOf(context);
+    height -= padding.bottom + padding.top + 200;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      drawer: menuDrawer(db, activePage: 'opnameSessionCombinator'),
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        title: const Text('Stock Opname Combinator'),
+        leading: const DrawerButton(),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: _pickFiles,
+                  child: const Text('Pick File'),
                 ),
+                const SizedBox(
+                  width: 10,
+                ),
+                ElevatedButton(
+                  onPressed: _combineDataExcel,
+                  child: const Text('Combine File'),
+                ),
+              ],
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Container(
+              height: height,
+              constraints: BoxConstraints(maxWidth: 600),
+              child: ListView(
+                children: files
+                    .map<ListTile>((file) => ListTile(
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: Colors.black, width: 1),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          tileColor: colorScheme.onPrimary,
+                          textColor: colorScheme.primary,
+                          subtitle: Text(file.path),
+                          // contentPadding: EdgeInsets.all(10),
+                          hoverColor: colorScheme.secondary,
+                          trailing: IconButton(
+                              onPressed: () => setState(() {
+                                    files.remove(file);
+                                  }),
+                              icon: const Icon(Icons.close)),
+                        ))
+                    .toList(),
               ),
-              const SizedBox(
-                height: 10,
-              ),
-              ElevatedButton(
-                onPressed: _combineDataExcel,
-                child: const Text('Combine File'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

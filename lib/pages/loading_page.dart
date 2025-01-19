@@ -47,9 +47,8 @@ class _LoadingPageState extends State<LoadingPage> {
 
   void _goToHomePage() {
     Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (context) => Provider<Database>.value(
-            value: db,
-            child: const HomePage(title: 'Stock Opname Session Generator'))));
+        builder: (context) =>
+            Provider<Database>.value(value: db, child: const HomePage())));
   }
 
   void prepareDatabase() async {
