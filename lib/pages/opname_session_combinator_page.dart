@@ -69,12 +69,13 @@ class _OpnameSessionCombinatorPageState
             ),
             Container(
               height: height,
-              constraints: BoxConstraints(maxWidth: 600),
+              constraints: const BoxConstraints(maxWidth: 600),
               child: ListView(
                 children: files
                     .map<ListTile>((file) => ListTile(
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(color: Colors.black, width: 1),
+                            side:
+                                const BorderSide(color: Colors.black, width: 1),
                             borderRadius: BorderRadius.circular(5),
                           ),
                           tileColor: colorScheme.onPrimary,
