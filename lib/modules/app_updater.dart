@@ -118,9 +118,9 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
 
   final Map _downloadPath = {
     TargetPlatform.android:
-        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/main/src/android/Output/allegra-pos.apk",
+        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/android/Output/allegra-pos.apk",
     TargetPlatform.windows:
-        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/main/src/windows/Output/allegra-pos.exe"
+        "https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/src/windows/Output/allegra-pos.exe"
   };
 
   Future<String?> downloadPath(String extFile) {
