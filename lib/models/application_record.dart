@@ -1,5 +1,19 @@
 import 'package:sqflite/sqflite.dart';
 
+enum QueryOrder {
+  asc,
+  desc;
+
+  @override
+  String toString() {
+    if (this == asc) {
+      return 'ASC';
+    } else {
+      return 'DESC';
+    }
+  }
+}
+
 abstract class ApplicationRecord {
   // String ApplicationRecord.tableName = '';
   // String ApplicationRecord.pkField = 'id';
@@ -28,6 +42,8 @@ class Orm {
       {Map<String, Object?>? filter,
       int? page,
       int? limit,
+      String? orderBy,
+      QueryOrder orderValue = QueryOrder.asc,
       required T Function(Map<String, Object?>) convert}) async {
     List<String>? query;
     List? values;
@@ -47,6 +63,7 @@ class Orm {
         where: query?.join(' AND '),
         whereArgs: values,
         offset: offset,
+        orderBy: "$orderBy ${orderValue.toString()}",
         limit: limit);
     return result.map<T>((row) => convert(row)).toList();
   }

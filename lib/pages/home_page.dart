@@ -33,7 +33,10 @@ class _HomePageState extends State<HomePage>
         pkField: OpnameSession.pkField,
         db: db);
     orm
-        .finds<OpnameSession>(convert: OpnameSession.convert)
+        .finds<OpnameSession>(
+            orderBy: 'updated_at',
+            orderValue: QueryOrder.desc,
+            convert: OpnameSession.convert)
         .then((data) => setState(() {
               opnameSessions = data;
             }));
@@ -52,7 +55,8 @@ class _HomePageState extends State<HomePage>
         ],
         leading: const DrawerButton(),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.only(bottom: 70.0),
         child: opnameSessionView(),
       ),
       floatingActionButton: FloatingActionButton(
@@ -79,76 +83,79 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget opnameSessionView() {
-    return ListView(
-        children: opnameSessions
-            .map<ListTile>((opnameSession) => ListTile(
-                  title: Text(
-                    "Lokasi : ${opnameSession.location}",
-                  ),
-                  subtitle:
-                      Text("Tanggal: ${opnameSession.updatedAt.formatDate()}"),
-                  leading: Text(
-                    opnameSession.status.toString(),
-                  ),
-                  trailing: MenuAnchor(
-                    builder: (BuildContext context, MenuController controller,
-                        Widget? child) {
-                      return IconButton(
-                        onPressed: () {
-                          if (controller.isOpen) {
-                            controller.close();
-                          } else {
-                            controller.open();
-                          }
-                        },
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'Show menu',
-                      );
-                    },
-                    menuChildren: [
-                      MenuItemButton(
-                        onPressed: () async {
-                          final orm = Orm(
-                              tableName: OpnameItem.tableName,
-                              pkField: OpnameItem.pkField,
-                              db: db);
-                          opnameSession.items = await orm.finds<OpnameItem>(
-                              filter: {'opname_session_id': opnameSession.id},
-                              convert: OpnameItem.convert);
-                          generateExcel(opnameSession).then((fileLocation) {
-                            if (fileLocation == null) {
-                              toastification.show(
-                                type: ToastificationType.error,
-                                title: const Text('Failed export excel.'),
-                                autoCloseDuration: const Duration(seconds: 5),
-                              );
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 500),
+      child: ListView(
+          children: opnameSessions
+              .map<ListTile>((opnameSession) => ListTile(
+                    title: Text(
+                      "Lokasi : ${opnameSession.location}",
+                    ),
+                    subtitle: Text(
+                        "Tanggal: ${opnameSession.updatedAt.formatDate()}"),
+                    leading: Text(
+                      opnameSession.status.toString(),
+                    ),
+                    trailing: MenuAnchor(
+                      builder: (BuildContext context, MenuController controller,
+                          Widget? child) {
+                        return IconButton(
+                          onPressed: () {
+                            if (controller.isOpen) {
+                              controller.close();
                             } else {
-                              toastification.show(
-                                type: ToastificationType.success,
-                                title: const Text('Success export excel.'),
-                                description: Text('save at $fileLocation'),
-                                autoCloseDuration: const Duration(seconds: 5),
-                              );
+                              controller.open();
                             }
-                          });
-                        },
-                        leadingIcon: const Icon(Icons.download),
-                        child: const Text('Export Excel'),
-                      ),
-                      MenuItemButton(
-                        onPressed: () => _editOpnameSession(opnameSession),
-                        leadingIcon: const Icon(Icons.edit),
-                        child: const Text('edit'),
-                      ),
-                      MenuItemButton(
-                        onPressed: () => _deleteOpnameSession(opnameSession),
-                        leadingIcon: const Icon(Icons.delete),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ),
-                ))
-            .toList());
+                          },
+                          icon: const Icon(Icons.more_vert),
+                          tooltip: 'Show menu',
+                        );
+                      },
+                      menuChildren: [
+                        MenuItemButton(
+                          onPressed: () async {
+                            final orm = Orm(
+                                tableName: OpnameItem.tableName,
+                                pkField: OpnameItem.pkField,
+                                db: db);
+                            opnameSession.items = await orm.finds<OpnameItem>(
+                                filter: {'opname_session_id': opnameSession.id},
+                                convert: OpnameItem.convert);
+                            generateExcel(opnameSession).then((fileLocation) {
+                              if (fileLocation == null) {
+                                toastification.show(
+                                  type: ToastificationType.error,
+                                  title: const Text('Failed export excel.'),
+                                  autoCloseDuration: const Duration(seconds: 5),
+                                );
+                              } else {
+                                toastification.show(
+                                  type: ToastificationType.success,
+                                  title: const Text('Success export excel.'),
+                                  description: Text('save at $fileLocation'),
+                                  autoCloseDuration: const Duration(seconds: 5),
+                                );
+                              }
+                            });
+                          },
+                          leadingIcon: const Icon(Icons.download),
+                          child: const Text('Export Excel'),
+                        ),
+                        MenuItemButton(
+                          onPressed: () => _editOpnameSession(opnameSession),
+                          leadingIcon: const Icon(Icons.edit),
+                          child: const Text('edit'),
+                        ),
+                        MenuItemButton(
+                          onPressed: () => _deleteOpnameSession(opnameSession),
+                          leadingIcon: const Icon(Icons.delete),
+                          child: const Text('Delete'),
+                        ),
+                      ],
+                    ),
+                  ))
+              .toList()),
+    );
   }
 
   void _editOpnameSession(opnameSession) {

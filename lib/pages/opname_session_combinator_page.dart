@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
@@ -33,9 +32,6 @@ class _OpnameSessionCombinatorPageState
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.sizeOf(context).height;
-    var padding = MediaQuery.paddingOf(context);
-    height -= padding.bottom + padding.top + 200;
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       drawer: menuDrawer(db, activePage: 'opnameSessionCombinator'),
@@ -43,56 +39,47 @@ class _OpnameSessionCombinatorPageState
         backgroundColor: backgroundColor,
         title: const Text('Stock Opname Combinator'),
         leading: const DrawerButton(),
+        actions: [
+          ElevatedButton(
+            onPressed: _pickFiles,
+            child: const Text('Pick File'),
+          ),
+          const SizedBox(
+            width: 10,
+          ),
+          ElevatedButton(
+            onPressed: _combineDataExcel,
+            child: const Text('Combine File'),
+          ),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _pickFiles,
-                  child: const Text('Pick File'),
-                ),
-                const SizedBox(
-                  width: 10,
-                ),
-                ElevatedButton(
-                  onPressed: _combineDataExcel,
-                  child: const Text('Combine File'),
-                ),
-              ],
-            ),
-            const SizedBox(
+      body: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: ListView.separated(
+            separatorBuilder: (context, index) => const SizedBox(
               height: 10,
             ),
-            Container(
-              height: height,
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: ListView(
-                children: files
-                    .map<ListTile>((file) => ListTile(
-                          shape: RoundedRectangleBorder(
-                            side:
-                                const BorderSide(color: Colors.black, width: 1),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          tileColor: colorScheme.onPrimary,
-                          textColor: colorScheme.primary,
-                          subtitle: Text(file.path),
-                          // contentPadding: EdgeInsets.all(10),
-                          hoverColor: colorScheme.secondary,
-                          trailing: IconButton(
-                              onPressed: () => setState(() {
-                                    files.remove(file);
-                                  }),
-                              icon: const Icon(Icons.close)),
-                        ))
-                    .toList(),
+            itemCount: files.length,
+            itemBuilder: (BuildContext context, int index) => ListTile(
+              shape: RoundedRectangleBorder(
+                side: const BorderSide(color: Colors.black, width: 1),
+                borderRadius: BorderRadius.circular(5),
               ),
+              dense: true,
+              tileColor: colorScheme.onPrimary,
+              textColor: colorScheme.primary,
+              title: Text(files[index].path),
+              // contentPadding: EdgeInsets.all(10),
+              hoverColor: colorScheme.secondary,
+              trailing: IconButton(
+                  onPressed: () => setState(() {
+                        files.removeAt(index);
+                      }),
+                  icon: const Icon(Icons.close)),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -153,7 +140,7 @@ class _OpnameSessionCombinatorPageState
     }
   }
 
-  void _combineDataExcel() {
+  void _combineDataExcel() async {
     masterContainers = {};
     for (File file in files) {
       var opnameItems = openExcelFile(file);
