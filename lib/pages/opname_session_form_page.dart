@@ -31,6 +31,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   late final Database db;
   bool _isFetchingItem = false;
   bool opnameSessionChanged = false;
+  bool isAutoQty = false;
   int safetyNetQTY = 100;
   @override
   void initState() {
@@ -118,6 +119,20 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 },
               ),
               const SizedBox(
+                height: 10,
+              ),
+              Row(
+                children: [
+                  const Text('auto QTY 1 :'),
+                  Switch(
+                    value: isAutoQty,
+                    onChanged: (value) => setState(() {
+                      isAutoQty = value;
+                    }),
+                  ),
+                ],
+              ),
+              const SizedBox(
                 height: 20,
               ),
               TextFormField(
@@ -153,37 +168,74 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                     child: ListView(
                   children: opnameItems
                       .map<ListTile>((opnameItem) => ListTile(
-                            title: Text("Kode Item: ${opnameItem.itemCode}"),
-                            subtitle: Text(
-                                "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
-                            leading: Container(
-                              constraints: const BoxConstraints(minWidth: 50),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Text('QTY'),
-                                  Text(
-                                    opnameItem.quantity.format(),
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
+                          title: Text("Kode Item: ${opnameItem.itemCode}"),
+                          subtitle: Text(
+                              "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                          leading: Container(
+                            constraints: const BoxConstraints(minWidth: 50),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text('QTY'),
+                                Text(
+                                  opnameItem.quantity.format(),
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
-                            trailing: IconButton(
+                          ),
+                          trailing: MenuAnchor(
+                            builder: (BuildContext context,
+                                MenuController controller, Widget? child) {
+                              return IconButton(
                                 onPressed: () {
-                                  confirmDialog(
-                                          'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
-                                      .then((isConfirmed) {
-                                    if (isConfirmed) {
-                                      _removeItem(opnameItem);
-                                    }
-                                  });
+                                  if (controller.isOpen) {
+                                    controller.close();
+                                  } else {
+                                    controller.open();
+                                  }
                                 },
-                                icon: const Icon(Icons.close)),
-                          ))
+                                icon: const Icon(Icons.more_vert),
+                                tooltip: 'Show options',
+                              );
+                            },
+                            menuChildren: [
+                              MenuItemButton(
+                                  onPressed: () {
+                                    _openInputQuantityModal(opnameItem.itemCode,
+                                            quantity: opnameItem.quantity,
+                                            focusNode: FocusNode())
+                                        .then((int? quantity) {
+                                      if (quantity != null) {
+                                        setState(() {
+                                          opnameItem.quantity = quantity;
+                                          _qtyController.text = '';
+                                          _itemCodeController.text = '';
+                                        });
+                                      }
+                                    }).whenComplete(() {
+                                      _focusNode.requestFocus();
+                                    });
+                                  },
+                                  child: Text('Edit'),
+                                  leadingIcon: const Icon(Icons.edit)),
+                              MenuItemButton(
+                                  onPressed: () {
+                                    confirmDialog(
+                                            'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
+                                        .then((isConfirmed) {
+                                      if (isConfirmed) {
+                                        _removeItem(opnameItem);
+                                      }
+                                    });
+                                  },
+                                  child: Text('Hapus'),
+                                  leadingIcon: const Icon(Icons.close)),
+                            ],
+                          )))
                       .toList(),
                 )),
               ),
@@ -282,6 +334,12 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     if (value == null || value.isEmpty) {
       return;
     }
+    if (isAutoQty) {
+      _updateOpname(value, 1);
+      _itemCodeController.text = '';
+      _focusNode.requestFocus();
+      return;
+    }
     final focusNode2 = FocusNode();
     _openInputQuantityModal(value, focusNode: focusNode2).then((int? quantity) {
       if (quantity != null) {
@@ -295,8 +353,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   }
 
   Future<int?> _openInputQuantityModal(String itemCode,
-      {FocusNode? focusNode}) {
+      {FocusNode? focusNode, int? quantity}) {
     focusNode?.requestFocus();
+    _qtyController.text = quantity?.toString() ?? '';
     return showDialog<int>(
         context: context,
         builder: (BuildContext context) => Dialog(
