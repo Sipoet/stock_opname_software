@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:ui';
 import 'package:toastification/toastification.dart';
@@ -18,12 +19,11 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   String _message = '';
   final dio = Dio();
   Future<bool> checkUpdate() async {
-    if (kIsWeb) {
+    if (kIsWeb || !await checkPermission()) {
       return false;
     }
-    TargetPlatform platform = defaultTargetPlatform;
-    PackageInfo packageInfo = await PackageInfo.fromPlatform();
-    localVersion = packageInfo.version;
+
+    localVersion = await appVersion();
     return dio
         .get(
       'https://raw.githubusercontent.com/Sipoet/stock_opname_software/master/pubspec.yaml',
@@ -33,6 +33,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
         var doc = loadYaml(response.data);
         latestVersion = doc['version'];
         if (isOlderVersion()) {
+          TargetPlatform platform = defaultTargetPlatform;
           await _showConfirmDialog(platform) ?? false;
         } else {
           return true;
@@ -45,12 +46,21 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
     });
   }
 
+  Future<String> appVersion() async {
+    PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    return packageInfo.version;
+  }
+
   void _defaultErrorResponse({error}) {
     toastification.dismissAll();
     toastification.show(
         type: ToastificationType.error,
         title: const Text('gagal update'),
         description: Text(error.toString()));
+  }
+
+  Future<bool> checkPermission() {
+    return Permission.requestInstallPackages.request().isGranted;
   }
 
   bool isOlderVersion() {
