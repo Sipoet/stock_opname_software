@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -7,6 +5,7 @@ import 'package:stock_opname_software/models/application_record.dart';
 
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/extensions.dart';
+import 'package:stock_opname_software/modules/confirm_dialog.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 import 'package:stock_opname_software/thousand_separator_formatter.dart';
 
@@ -22,7 +21,7 @@ class OpnameSessionFormPage extends StatefulWidget {
 }
 
 class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
-    with OpnameExcelGenerator {
+    with OpnameExcelGenerator, ConfirmDialog {
   OpnameSession get opnameSession => widget.opnameSession;
   List<OpnameItem> get opnameItems => widget.opnameSession.items;
   final _focusNode = FocusNode();
@@ -168,6 +167,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                     child: ListView(
                   children: opnameItems
                       .map<ListTile>((opnameItem) => ListTile(
+                          key: ObjectKey(opnameItem),
                           title: Text("Kode Item: ${opnameItem.itemCode}"),
                           subtitle: Text(
                               "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
@@ -199,41 +199,43 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                                   }
                                 },
                                 icon: const Icon(Icons.more_vert),
-                                tooltip: 'Show options',
                               );
                             },
                             menuChildren: [
                               MenuItemButton(
-                                  onPressed: () {
-                                    _openInputQuantityModal(opnameItem.itemCode,
-                                            quantity: opnameItem.quantity,
-                                            focusNode: FocusNode())
-                                        .then((int? quantity) {
-                                      if (quantity != null) {
-                                        setState(() {
-                                          opnameItem.quantity = quantity;
-                                          _qtyController.text = '';
-                                          _itemCodeController.text = '';
-                                        });
-                                      }
-                                    }).whenComplete(() {
-                                      _focusNode.requestFocus();
-                                    });
-                                  },
-                                  child: Text('Edit'),
-                                  leadingIcon: const Icon(Icons.edit)),
+                                onPressed: () {
+                                  _openInputQuantityModal(opnameItem.itemCode,
+                                          quantity: opnameItem.quantity,
+                                          focusNode: FocusNode())
+                                      .then((int? quantity) {
+                                    if (quantity != null) {
+                                      setState(() {
+                                        _qtyController.text = '';
+                                        _itemCodeController.text = '';
+                                        _updateOpnameItem(opnameItem,
+                                            quantity: quantity);
+                                      });
+                                    }
+                                  }).whenComplete(() {
+                                    _focusNode.requestFocus();
+                                  });
+                                },
+                                leadingIcon: const Icon(Icons.edit),
+                                child: const Text('Edit'),
+                              ),
                               MenuItemButton(
-                                  onPressed: () {
-                                    confirmDialog(
-                                            'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
-                                        .then((isConfirmed) {
-                                      if (isConfirmed) {
-                                        _removeItem(opnameItem);
-                                      }
-                                    });
-                                  },
-                                  child: Text('Hapus'),
-                                  leadingIcon: const Icon(Icons.close)),
+                                onPressed: () {
+                                  confirmDialog(
+                                          'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
+                                      .then((isConfirmed) {
+                                    if (isConfirmed) {
+                                      _removeItem(opnameItem);
+                                    }
+                                  });
+                                },
+                                leadingIcon: const Icon(Icons.close),
+                                child: const Text('Hapus'),
+                              ),
                             ],
                           )))
                       .toList(),
@@ -243,71 +245,6 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
           ),
         ),
       ),
-    );
-  }
-
-  Future<bool> confirmDialog(String message,
-      {String agreeText = 'Ya',
-      String declineText = 'Tidak',
-      int delayedSubmitOnSeconds = 0}) {
-    String messageDelayed = delayedSubmitOnSeconds == 0
-        ? agreeText
-        : 'tunggu $delayedSubmitOnSeconds detik';
-    bool isInit = true;
-
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false, // user must tap button!
-      builder: (BuildContext context) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter dialogSetState) {
-          if (isInit && messageDelayed != agreeText) {
-            Timer.periodic(const Duration(seconds: 1), (timer) {
-              final second = delayedSubmitOnSeconds - timer.tick;
-              dialogSetState(() {
-                if (second > 0) {
-                  messageDelayed = 'tunggu ${second.toString()} detik';
-                } else {
-                  messageDelayed = agreeText;
-                  timer.cancel();
-                }
-              });
-            });
-          }
-          isInit = false;
-          return AlertDialog(
-            content: Text(message),
-            actions: <Widget>[
-              TextButton(
-                child: Text(
-                  messageDelayed,
-                  style: TextStyle(
-                      color: messageDelayed == agreeText
-                          ? Colors.black
-                          : Colors.grey),
-                ),
-                onPressed: () {
-                  if (messageDelayed == agreeText) {
-                    Navigator.of(context).pop(true);
-                  }
-                },
-              ),
-              TextButton(
-                child: Text(declineText),
-                onPressed: () {
-                  Navigator.of(context).pop(false);
-                },
-              ),
-            ],
-          );
-        },
-      ),
-    ).then(
-      (value) {
-        if (value == true) {
-          return true;
-        }
-        return false;
-      },
     );
   }
 
@@ -459,26 +396,32 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
 
   void _updateOpname(String itemCode, int quantity) async {
     if (opnameSession.id == null || opnameSessionChanged) {
-      final orm = Orm(
-          tableName: OpnameSession.tableName,
-          pkField: OpnameSession.pkField,
-          db: db);
-      opnameSession.id = await orm.save(opnameSession);
+      await createOpnameSession();
       opnameSessionChanged = false;
     }
     OpnameItem? opnameItem = findOpnameItem(itemCode);
     if (opnameItem == null) {
       _insertOpnameItem(itemCode, quantity);
     } else {
-      _updateOpnameItem(opnameItem, quantity);
+      _updateOpnameItem(opnameItem, quantity: opnameItem.quantity + quantity);
     }
   }
 
-  void _updateOpnameItem(OpnameItem opnameItem, int quantity) {
+  Future<OpnameSession> createOpnameSession() async {
+    final orm = Orm(
+        tableName: OpnameSession.tableName,
+        pkField: OpnameSession.pkField,
+        db: db);
+    opnameSession.id = await orm.save(opnameSession);
+    return opnameSession;
+  }
+
+  void _updateOpnameItem(OpnameItem opnameItem, {required int quantity}) {
     final orm = Orm(
         tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
     final beforeUpdatedAt = opnameItem.updatedAt;
-    opnameItem.quantity += quantity;
+    final beforeQuantity = opnameItem.quantity;
+    opnameItem.quantity = quantity;
     opnameItem.updatedAt = DateTime.now();
     orm.save(opnameItem).then(
         (value) => setState(() {
@@ -490,7 +433,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
         autoCloseDuration: const Duration(seconds: 5),
       );
       setState(() {
-        opnameItem.quantity -= quantity;
+        opnameItem.quantity = beforeQuantity;
         opnameItem.updatedAt = beforeUpdatedAt;
       });
     });
@@ -508,6 +451,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     );
     orm.save(opnameItem).then(
         (value) => setState(() {
+              opnameItem.id = value;
               opnameSession.items.add(opnameItem);
             }),
         onError: (error) => toastification.show(

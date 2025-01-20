@@ -96,4 +96,9 @@ class Orm {
   Future<int> delete<T extends ApplicationRecord>(id) async {
     return await db.delete(tableName, where: '$pkField = ?', whereArgs: [id]);
   }
+
+  Future<int> deleteWhere<T extends ApplicationRecord>(
+      {required String where, required List<Object?> whereArgs}) async {
+    return await db.delete(tableName, where: where, whereArgs: whereArgs);
+  }
 }

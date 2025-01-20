@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/models/application_record.dart';
+import 'package:stock_opname_software/modules/confirm_dialog.dart';
 import 'package:stock_opname_software/modules/list_menu.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 import 'package:stock_opname_software/pages/opname_session_form_page.dart';
@@ -17,7 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage>
-    with OpnameExcelGenerator, ListMenu {
+    with OpnameExcelGenerator, ListMenu, ConfirmDialog {
   List<OpnameSession> opnameSessions = [];
   late final Database db;
   @override
@@ -92,9 +93,17 @@ class _HomePageState extends State<HomePage>
                       "Lokasi : ${opnameSession.location}",
                     ),
                     subtitle: Text(
-                        "Tanggal: ${opnameSession.updatedAt.formatDate()}"),
-                    leading: Text(
-                      opnameSession.status.toString(),
+                        "Status ${opnameSession.status.toString()}, Tanggal: ${opnameSession.updatedAt.formatDate()}"),
+                    leading: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        const Text('ID',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          opnameSession.id.toString(),
+                          style: TextStyle(fontSize: 18),
+                        ),
+                      ],
                     ),
                     trailing: MenuAnchor(
                       builder: (BuildContext context, MenuController controller,
@@ -147,7 +156,17 @@ class _HomePageState extends State<HomePage>
                           child: const Text('edit'),
                         ),
                         MenuItemButton(
-                          onPressed: () => _deleteOpnameSession(opnameSession),
+                          onPressed: () {
+                            confirmDialog(
+                                    'Apakah yakin hapus opname session ${opnameSession.id}')
+                                .then(
+                              (isConfirmed) {
+                                if (isConfirmed) {
+                                  _deleteOpnameSession(opnameSession);
+                                }
+                              },
+                            );
+                          },
                           leadingIcon: const Icon(Icons.delete),
                           child: const Text('Delete'),
                         ),
@@ -172,6 +191,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _deleteOpnameSession(OpnameSession opnameSession) {
+    _deleteOpnameItems(opnameSession);
     final orm = Orm(
         tableName: OpnameSession.tableName,
         pkField: OpnameSession.pkField,
@@ -184,6 +204,23 @@ class _HomePageState extends State<HomePage>
               type: ToastificationType.error,
               title: Text(
                   'Failed remove Opname Session at ${opnameSession.updatedAt.formatDate()}.'),
+              autoCloseDuration: const Duration(seconds: 5),
+            ));
+  }
+
+  void _deleteOpnameItems(OpnameSession opnameSession) {
+    final orm = Orm(
+        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
+    orm.deleteWhere(where: 'opname_session_id = ?', whereArgs: [
+      opnameSession.id
+    ]).then(
+        (value) => setState(() {
+              opnameSession.items = [];
+            }),
+        onError: (error) => toastification.show(
+              type: ToastificationType.error,
+              title: Text(
+                  'Failed remove Opname items from opname session at ${opnameSession.updatedAt.formatDate()}.'),
               autoCloseDuration: const Duration(seconds: 5),
             ));
   }
