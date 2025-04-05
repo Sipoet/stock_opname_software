@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -11,6 +12,7 @@ import 'package:stock_opname_software/thousand_separator_formatter.dart';
 
 import 'package:toastification/toastification.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_barcode_scanner_plus/flutter_barcode_scanner_plus.dart';
 
 class OpnameSessionFormPage extends StatefulWidget {
   final OpnameSession opnameSession;
@@ -60,6 +62,18 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
         .whenComplete(() => setState(() {
               _isFetchingItem = false;
             }));
+  }
+
+  void _scanBarcode() {
+    FlutterBarcodeScanner.scanBarcode(
+            '#ff6666', 'Batal', true, ScanMode.BARCODE)
+        .then((res) {
+      if (res.isNotEmpty && res != '-1') {
+        setState(() {
+          _itemCodeController.text = res;
+        });
+      }
+    });
   }
 
   @override
@@ -133,6 +147,16 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               ),
               const SizedBox(
                 height: 20,
+              ),
+              Offstage(
+                offstage: !kIsWeb,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ElevatedButton.icon(
+                      onPressed: () => _scanBarcode,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Buka Kamera untuk Scan')),
+                ),
               ),
               TextFormField(
                 focusNode: _focusNode,
