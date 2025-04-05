@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
+import 'package:stock_opname_software/modules/app_updater.dart';
 import 'package:stock_opname_software/modules/list_menu.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 
@@ -19,7 +20,7 @@ class OpnameSessionCombinatorPage extends StatefulWidget {
 
 class _OpnameSessionCombinatorPageState
     extends State<OpnameSessionCombinatorPage>
-    with OpnameExcelGenerator, ListMenu {
+    with OpnameExcelGenerator, ListMenu, AppUpdater {
   late final Database db;
   Map<String, OpnameItem> masterContainers = {};
   String? location;

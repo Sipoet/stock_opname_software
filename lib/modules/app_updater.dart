@@ -223,4 +223,16 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
       navigator.pop();
     });
   }
+
+  void showVersion(version) {
+    showAboutDialog(
+        context: context,
+        applicationName: 'Allegra POS Stock Opname',
+        applicationVersion: version,
+        applicationIcon: Image.asset(
+          'assets/images/logo.png',
+          width: 45,
+        ),
+        applicationLegalese: "© ${DateTime.now().year} Allegra");
+  }
 }

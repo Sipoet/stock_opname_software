@@ -13,8 +13,6 @@ enum OpnameStatus {
         return 'open';
       case close:
         return 'close';
-      default:
-        return '';
     }
   }
 
