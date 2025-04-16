@@ -19,7 +19,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   String _message = '';
   final dio = Dio();
   Future<bool> checkUpdate() async {
-    if (kIsWeb || !await checkPermission()) {
+    if (kIsWeb || !await _checkPermission()) {
       return false;
     }
 
@@ -59,7 +59,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
         description: Text(error.toString()));
   }
 
-  Future<bool> checkPermission() {
+  Future<bool> _checkPermission() {
     return Permission.requestInstallPackages.request().isGranted;
   }
 

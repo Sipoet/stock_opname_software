@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,6 +7,7 @@ import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/modules/confirm_dialog.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
+import 'package:stock_opname_software/modules/platform_checker.dart';
 import 'package:stock_opname_software/thousand_separator_formatter.dart';
 
 import 'package:toastification/toastification.dart';
@@ -23,7 +23,7 @@ class OpnameSessionFormPage extends StatefulWidget {
 }
 
 class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
-    with OpnameExcelGenerator, ConfirmDialog {
+    with OpnameExcelGenerator, ConfirmDialog, PlatformChecker {
   OpnameSession get opnameSession => widget.opnameSession;
   List<OpnameItem> get opnameItems => widget.opnameSession.items;
   final _focusNode = FocusNode();
@@ -149,11 +149,11 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 height: 20,
               ),
               Offstage(
-                offstage: !kIsWeb,
+                offstage: !isNativeMobileDevice(),
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: ElevatedButton.icon(
-                      onPressed: () => _scanBarcode,
+                      onPressed: _scanBarcode,
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('Buka Kamera untuk Scan')),
                 ),

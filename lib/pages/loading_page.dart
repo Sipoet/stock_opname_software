@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:stock_opname_software/modules/platform_checker.dart';
 import 'package:stock_opname_software/modules/app_updater.dart';
-import 'package:stock_opname_software/pages/home_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart' as w;
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:stock_opname_software/pages/home_page.dart';
 
 class LoadingPage extends StatefulWidget {
   const LoadingPage({super.key});
@@ -15,13 +18,16 @@ class LoadingPage extends StatefulWidget {
   State<LoadingPage> createState() => _LoadingPageState();
 }
 
-class _LoadingPageState extends State<LoadingPage> with AppUpdater {
+class _LoadingPageState extends State<LoadingPage>
+    with AppUpdater, PlatformChecker {
   String progress = '';
   late final Database db;
   final dbName = 'app_db.sqlite3';
   @override
   void initState() {
-    checkUpdate().then((isConfirmed) => prepareDatabase());
+    checkPermission().then((value) {
+      checkUpdate().then((isConfirmed) => prepareDatabase());
+    });
 
     super.initState();
   }
@@ -57,11 +63,57 @@ class _LoadingPageState extends State<LoadingPage> with AppUpdater {
     WidgetsFlutterBinding.ensureInitialized();
     final dbPath = await getDbPath();
     // await File(dbPath).delete();
-    openDatabase(dbPath, version: 1, onCreate: migrateDatabase)
-        .then((Database database) {
+    openDatabase(
+      dbPath,
+      version: 1,
+      onCreate: migrateDatabase,
+      onConfigure: (db) {},
+    ).then((Database database) {
       db = database;
       _goToHomePage();
     });
+  }
+
+  Future checkPermission() async {
+    try {
+      List<Permission> permissions = [];
+      if (isAndroid()) {
+        DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+        AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+        permissions.addAll([
+          Permission.requestInstallPackages,
+          Permission.camera,
+        ]);
+        if (androidInfo.version.sdkInt <= 32) {
+          permissions.add(Permission.storage);
+        } else {
+          // permissions.add(Permission.photos);
+        }
+      } else if (isIOS()) {
+        permissions.addAll([Permission.mediaLibrary, Permission.photos]);
+      }
+      for (Permission permission in permissions) {
+        _requestPermission(permission);
+      }
+    } catch (error) {
+      AlertDialog(
+        title: const Text('Error'),
+        content: Text(error.toString()),
+        actions: [
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('close'))
+        ],
+      );
+    }
+  }
+
+  Future _requestPermission(Permission permission) async {
+    debugPrint('===cek permission ${permission.toString()}');
+    final status = await permission.status;
+    if (status.isDenied || status.isPermanentlyDenied) {
+      await permission.request().isGranted;
+    }
   }
 
   Future<String> getDbPath() async {

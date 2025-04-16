@@ -7,11 +7,13 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.MANAGE_MEDIA" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.PHOTOS" />
     <!-- Permissions needed from open_file package -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <application
         android:requestLegacyExternalStorage="true"
-        android:label="stock_opname_software"
+        android:label="Stock Opname Software"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
