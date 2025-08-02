@@ -31,11 +31,28 @@ class Orm {
   final Database db;
   Orm({required this.tableName, required this.pkField, required this.db});
 
-  Future<T> find<T extends ApplicationRecord>(
+  Future<T?> find<T extends ApplicationRecord>(
       String id, T Function(Map<String, Object?>) convert) async {
     final result =
         await db.query(tableName, where: '$pkField = ?', whereArgs: [id]);
-    return result.map<T>((row) => convert(row)).toList().first;
+    return result.map<T>((row) => convert(row)).toList().firstOrNull;
+  }
+
+  Future<T?> findBy<T extends ApplicationRecord>(Map<String, Object?> filter,
+      T Function(Map<String, Object?>) convert) async {
+    List<String> query = [];
+    List<Object?> values = [];
+    filter.forEach((key, value) {
+      query.add('$key = ?');
+      values.add(value);
+    });
+
+    final result = await db.query(
+      tableName,
+      where: query.join(' AND '),
+      whereArgs: values,
+    );
+    return result.map<T>((row) => convert(row)).toList().firstOrNull;
   }
 
   Future<List<T>> finds<T extends ApplicationRecord>(
@@ -68,29 +85,60 @@ class Orm {
     return result.map<T>((row) => convert(row)).toList();
   }
 
-  Future<dynamic> save(ApplicationRecord model) async {
+  Future<int> save(ApplicationRecord model, {Transaction? transaction}) async {
     final data = model.toJson();
     if (data[pkField] == null) {
-      return await _create(data);
+      return await _create(data, transaction: transaction);
     } else {
-      await _update(data);
-      return data[pkField];
+      return await _update(data, transaction: transaction);
     }
   }
 
-  Future<int> _create(Map<String, Object?> data) async {
-    if (data[pkField] == null) {
-      data.remove(pkField);
-    }
-    return await db.transaction<int>((txn) async {
-      return await txn.insert(tableName, data);
+  Future<bool> massSave(List<ApplicationRecord> models) async {
+    return db.transaction<bool>((trx) async {
+      for (ApplicationRecord model in models) {
+        await save(model, transaction: trx);
+      }
+      return true;
     });
   }
 
-  Future<bool> _update(Map<String, Object?> data) async {
-    int? count = await db.update(tableName, data,
+  Future<int> _create(Map<String, Object?> data,
+      {Transaction? transaction}) async {
+    if (data[pkField] == null) {
+      data.remove(pkField);
+    }
+    if (transaction == null) {
+      return await db.transaction<int>((txn) async {
+        return await txn.insert(tableName, data);
+      });
+    }
+    return await transaction.insert(tableName, data);
+  }
+
+  Future<int> _update(Map<String, Object?> data,
+      {Transaction? transaction}) async {
+    if (transaction == null) {
+      return await db.update(tableName, data,
+          where: '$pkField = ?', whereArgs: [data[pkField]]);
+    }
+    return await transaction.update(tableName, data,
         where: '$pkField = ?', whereArgs: [data[pkField]]);
-    return count > 0;
+  }
+
+  Future<Object?> maxOf(String keyname,
+      {Map<String, String> filter = const {}}) async {
+    String query = "SELECT MAX($keyname) from $tableName";
+    List filterQuery = [];
+    for (String key in filter.keys.toList()) {
+      final value = filter[key];
+      filterQuery.add("$key = '$value'");
+    }
+    if (filterQuery.isNotEmpty) {
+      query += ' WHERE ${filterQuery.join(' AND ')}';
+    }
+    final result = await db.rawQuery(query);
+    return result.firstOrNull?['MAX($keyname)'];
   }
 
   Future<int> delete<T extends ApplicationRecord>(id) async {

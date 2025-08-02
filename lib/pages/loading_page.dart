@@ -63,10 +63,12 @@ class _LoadingPageState extends State<LoadingPage>
     WidgetsFlutterBinding.ensureInitialized();
     final dbPath = await getDbPath();
     // await File(dbPath).delete();
+
     openDatabase(
       dbPath,
-      version: 1,
-      onCreate: migrateDatabase,
+      version: 2,
+      onCreate: createTables,
+      onUpgrade: updateTables,
       onConfigure: (db) {},
     ).then((Database database) {
       db = database;
@@ -133,22 +135,56 @@ class _LoadingPageState extends State<LoadingPage>
     } else if (Platform.isAndroid || Platform.isMacOS || Platform.isIOS) {}
   }
 
-  Future<void> migrateDatabase(Database db, int versions) async {
+  Future createTables(Database db, int version) async {
+    updateTables(db, 0, version);
+  }
+
+  Future<void> updateTables(Database db, int oldVersion, int newVersion) async {
     Batch batch = db.batch();
-    batch.execute('''
+    if (oldVersion < 1) {
+      batch.execute('''
     CREATE TABLE opname_sessions (
       id INTEGER NOT NULL PRIMARY KEY,
-      status TEXT NOT NULL,
-      location TEXT NOT NULL,
+      status VARCHAR(50) NOT NULL,
+      location VARCHAR(50) NOT NULL,
       updated_at DATETIME NOT NULL
     );''');
-    batch.execute('''CREATE TABLE opname_items (
+      batch.execute('''CREATE TABLE opname_items (
       id INTEGER NOT NULL PRIMARY KEY,
       opname_session_id INTEGER NOT NULL,
-      item_code TEXT NOT NULL,
+      rack VARCHAR(50),
+      item_code VARCHAR(50) NOT NULL,
       quantity INTEGER NOT NULL,
       updated_at DATETIME NOT NULL
     );''');
+      oldVersion += 1;
+    }
+    if (oldVersion < 2) {
+      batch.execute('''
+      DROP TABLE opname_items;
+      CREATE TABLE opname_items (
+      id INTEGER NOT NULL PRIMARY KEY,
+      opname_session_id INTEGER NOT NULL,
+      rack VARCHAR(50),
+      item_code VARCHAR(50) NOT NULL,
+      quantity INTEGER NOT NULL,
+      updated_at DATETIME NOT NULL
+    );''');
+      batch.execute('''CREATE TABLE items (
+      id INTEGER NOT NULL PRIMARY KEY,
+      code VARCHAR(50) NOT NULL,
+      name VARCHAR(250) NOT NULL,
+      barcode VARCHAR(20) NOT NULL UNIQUE,
+      sell_price REAL NOT NULL DEFAULT 999999,
+      updated_at DATETIME NOT NULL
+    );''');
+      batch.execute('''CREATE TABLE system_settings (
+      id INTEGER NOT NULL PRIMARY KEY,
+      keyname VARCHAR(50) NOT NULL,
+      value_str VARCHAR(250) NOT NULL
+    );''');
+      oldVersion += 1;
+    }
     await batch.commit();
   }
 }

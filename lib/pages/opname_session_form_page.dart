@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:stock_opname_software/models/application_record.dart';
+import 'package:stock_opname_software/models/item.dart';
 
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/extensions.dart';
@@ -33,7 +34,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   bool _isFetchingItem = false;
   bool opnameSessionChanged = false;
   bool isAutoQty = false;
-  int safetyNetQTY = 100;
+  int safetyNetQTY = 50;
+  String rack = '';
+  String? barcodeError;
   @override
   void initState() {
     db = context.read<Database>();
@@ -134,6 +137,20 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               const SizedBox(
                 height: 10,
               ),
+              SizedBox(
+                width: 200,
+                child: TextFormField(
+                  decoration: const InputDecoration(
+                    label: Text('Rak'),
+                    border: OutlineInputBorder(),
+                  ),
+                  initialValue: rack,
+                  onChanged: (value) => rack = value,
+                ),
+              ),
+              const SizedBox(
+                height: 10,
+              ),
               Row(
                 children: [
                   const Text('auto QTY 1 :'),
@@ -161,6 +178,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               TextFormField(
                 focusNode: _focusNode,
                 controller: _itemCodeController,
+                forceErrorText: barcodeError,
                 decoration: InputDecoration(
                   label: const Text('Kode Item/barcode'),
                   icon: IconButton(
@@ -187,83 +205,91 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               ),
               Visibility(
                 visible: !_isFetchingItem,
-                child: Expanded(
-                    child: ListView(
-                  children: opnameItems
-                      .map<ListTile>((opnameItem) => ListTile(
-                          key: ObjectKey(opnameItem),
-                          title: Text("Kode Item: ${opnameItem.itemCode}"),
-                          subtitle: Text(
-                              "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
-                          leading: Container(
-                            constraints: const BoxConstraints(minWidth: 50),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text('QTY'),
-                                Text(
-                                  opnameItem.quantity.format(),
-                                  style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold),
+                child: Card(
+                  child: SizedBox(
+                      height: 250,
+                      child: ListView.builder(
+                        addAutomaticKeepAlives: false,
+                        cacheExtent: 20,
+                        itemCount: opnameItems.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          OpnameItem opnameItem = opnameItems[index];
+                          return ListTile(
+                              key: ObjectKey(opnameItem),
+                              title: Text("Kode Item: ${opnameItem.itemCode}"),
+                              subtitle: Text(
+                                  "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                              leading: Container(
+                                constraints: const BoxConstraints(minWidth: 50),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('QTY'),
+                                    Text(
+                                      opnameItem.quantity.format(),
+                                      style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                          trailing: MenuAnchor(
-                            builder: (BuildContext context,
-                                MenuController controller, Widget? child) {
-                              return IconButton(
-                                onPressed: () {
-                                  if (controller.isOpen) {
-                                    controller.close();
-                                  } else {
-                                    controller.open();
-                                  }
+                              ),
+                              trailing: MenuAnchor(
+                                builder: (BuildContext context,
+                                    MenuController controller, Widget? child) {
+                                  return IconButton(
+                                    onPressed: () {
+                                      if (controller.isOpen) {
+                                        controller.close();
+                                      } else {
+                                        controller.open();
+                                      }
+                                    },
+                                    icon: const Icon(Icons.more_vert),
+                                  );
                                 },
-                                icon: const Icon(Icons.more_vert),
-                              );
-                            },
-                            menuChildren: [
-                              MenuItemButton(
-                                onPressed: () {
-                                  _openInputQuantityModal(opnameItem.itemCode,
-                                          quantity: opnameItem.quantity,
-                                          focusNode: FocusNode())
-                                      .then((int? quantity) {
-                                    if (quantity != null) {
-                                      setState(() {
-                                        _qtyController.text = '';
-                                        _itemCodeController.text = '';
-                                        _updateOpnameItem(opnameItem,
-                                            quantity: quantity);
+                                menuChildren: [
+                                  MenuItemButton(
+                                    onPressed: () {
+                                      _openInputQuantityModal(
+                                              opnameItem.itemCode,
+                                              quantity: opnameItem.quantity,
+                                              focusNode: FocusNode())
+                                          .then((int? quantity) {
+                                        if (quantity != null) {
+                                          setState(() {
+                                            _qtyController.text = '';
+                                            _itemCodeController.text = '';
+                                            _updateOpnameItem(opnameItem,
+                                                quantity: quantity);
+                                          });
+                                        }
+                                      }).whenComplete(() {
+                                        _focusNode.requestFocus();
                                       });
-                                    }
-                                  }).whenComplete(() {
-                                    _focusNode.requestFocus();
-                                  });
-                                },
-                                leadingIcon: const Icon(Icons.edit),
-                                child: const Text('Edit'),
-                              ),
-                              MenuItemButton(
-                                onPressed: () {
-                                  confirmDialog(
-                                          'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
-                                      .then((isConfirmed) {
-                                    if (isConfirmed) {
-                                      _removeItem(opnameItem);
-                                    }
-                                  });
-                                },
-                                leadingIcon: const Icon(Icons.close),
-                                child: const Text('Hapus'),
-                              ),
-                            ],
-                          )))
-                      .toList(),
-                )),
+                                    },
+                                    leadingIcon: const Icon(Icons.edit),
+                                    child: const Text('Edit'),
+                                  ),
+                                  MenuItemButton(
+                                    onPressed: () {
+                                      confirmDialog(
+                                              'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
+                                          .then((isConfirmed) {
+                                        if (isConfirmed) {
+                                          _removeItem(opnameItem);
+                                        }
+                                      });
+                                    },
+                                    leadingIcon: const Icon(Icons.close),
+                                    child: const Text('Hapus'),
+                                  ),
+                                ],
+                              ));
+                        },
+                      )),
+                ),
               ),
             ],
           ),
@@ -277,26 +303,39 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
       if (fileLocation == null) {
         toastification.show(
           type: ToastificationType.error,
-          title: const Text('Failed export excel.'),
+          title: const Text('Gagal export excel.'),
           autoCloseDuration: const Duration(seconds: 5),
         );
       } else {
         toastification.show(
           type: ToastificationType.success,
-          title: const Text('Success export excel.'),
-          description: Text('save at $fileLocation'),
+          title: const Text('Sukses export excel.'),
+          description: Text('tersimpan di $fileLocation'),
           autoCloseDuration: const Duration(seconds: 5),
         );
       }
     });
   }
 
-  void _checkCode(String? value) {
+  void _checkCode(String? value) async {
     if (value == null || value.isEmpty) {
       return;
     }
+    final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+    Item? item = await orm.findBy<Item>({'barcode': value}, Item.convert);
+    if (item == null) {
+      setState(() {
+        barcodeError = 'barcode tidak ditemukan';
+      });
+      _focusNode.requestFocus();
+      return;
+    } else {
+      setState(() {
+        barcodeError = null;
+      });
+    }
     if (isAutoQty) {
-      _updateOpname(value, 1);
+      _updateOpname(item, 1);
       _itemCodeController.text = '';
       _focusNode.requestFocus();
       return;
@@ -304,7 +343,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     final focusNode2 = FocusNode();
     _openInputQuantityModal(value, focusNode: focusNode2).then((int? quantity) {
       if (quantity != null) {
-        _updateOpname(value, quantity);
+        _updateOpname(item, quantity);
         _qtyController.text = '';
         _itemCodeController.text = '';
       }
@@ -409,7 +448,8 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
 
   OpnameItem? findOpnameItem(String itemCode) {
     final opnameItem = opnameSession.items.firstWhere(
-      (opnameItem) => opnameItem.itemCode == itemCode,
+      (opnameItem) =>
+          opnameItem.itemCode == itemCode && opnameItem.rack == rack,
       orElse: () => OpnameItem(opnameSessionId: opnameSession.id ?? 0),
     );
     if (opnameItem.itemCode.isEmpty) {
@@ -418,14 +458,14 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     return opnameItem;
   }
 
-  void _updateOpname(String itemCode, int quantity) async {
+  void _updateOpname(Item item, int quantity) async {
     if (opnameSession.id == null || opnameSessionChanged) {
       await createOpnameSession();
       opnameSessionChanged = false;
     }
-    OpnameItem? opnameItem = findOpnameItem(itemCode);
+    OpnameItem? opnameItem = findOpnameItem(item.code);
     if (opnameItem == null) {
-      _insertOpnameItem(itemCode, quantity);
+      _insertOpnameItem(item.code, quantity);
     } else {
       _updateOpnameItem(opnameItem, quantity: opnameItem.quantity + quantity);
     }
@@ -470,6 +510,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     OpnameItem opnameItem = OpnameItem(
       itemCode: itemCode,
       quantity: quantity,
+      rack: rack,
       opnameSessionId: opnameSession.id ?? 0,
       updatedAt: DateTime.now(),
     );

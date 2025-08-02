@@ -6,12 +6,14 @@ class OpnameItem extends ApplicationRecord {
   int opnameSessionId;
   String itemCode;
   int quantity;
+  String rack;
   DateTime updatedAt;
   OpnameItem(
       {this.itemCode = '',
       this.quantity = 0,
       DateTime? updatedAt,
       super.id,
+      this.rack = '',
       required this.opnameSessionId})
       : updatedAt = updatedAt ?? DateTime.now();
 
@@ -19,6 +21,7 @@ class OpnameItem extends ApplicationRecord {
     return OpnameItem(
         itemCode: json['item_code'],
         quantity: json['quantity'],
+        rack: json['rack'],
         updatedAt: DateTime.parse(json['updated_at']),
         id: json['id'],
         opnameSessionId: json['opname_session_id']);
@@ -29,6 +32,7 @@ class OpnameItem extends ApplicationRecord {
     return {
       'item_code': itemCode,
       'quantity': quantity,
+      'rack': rack,
       'updated_at': updatedAt.toIso8601String(),
       'opname_session_id': opnameSessionId,
       'id': id,
