@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -50,6 +52,9 @@ mixin OpnameExcelGenerator {
     cell = sheetObject.cell(CellIndex.indexByString('D1'));
     cell.value = TextCellValue('KETERANGAN (4)');
     cell.cellStyle = cellStyle;
+    cell = sheetObject.cell(CellIndex.indexByString('E1'));
+    cell.value = TextCellValue('RAK (5)');
+    cell.cellStyle = cellStyle;
     opnameSession.items.sort((a, b) => a.itemCode.compareTo(b.itemCode));
     for (final (index, opnameItem) in opnameSession.items.indexed) {
       cell = sheetObject.cell(
@@ -67,9 +72,14 @@ mixin OpnameExcelGenerator {
           CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: index + 1));
       cell.value = TextCellValue(
           "opname session at ${opnameSession.updatedAt.formatDate()}. last check at ${opnameItem.updatedAt.formatDatetime()}");
+      cell = sheetObject.cell(
+          CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: index + 1));
+      cell.value = TextCellValue(opnameItem.rackFormat);
     }
     var fileBytes = excel.save();
-    filename ??= "stock-opname-${opnameSession.updatedAt.dateIso()}.xlsx";
+    int randomNumber = Random().nextInt(8999) + 1000;
+    filename ??=
+        "stock-opname-${opnameSession.updatedAt.datetimeDigit()}${randomNumber.toString()}.xlsx";
     String? fileLocation = await _findLocation(filename);
 
     if (fileBytes != null && fileLocation != null) {

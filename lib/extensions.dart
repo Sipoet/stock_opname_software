@@ -15,6 +15,11 @@ extension FormatDatetime on DateTime {
     final dateFormat = DateFormat('yyyy-MM-dd');
     return dateFormat.format(this);
   }
+
+  String datetimeDigit() {
+    final dateFormat = DateFormat('yyyyMMddHHmmss');
+    return dateFormat.format(this);
+  }
 }
 
 extension FormatNumberInt on int {

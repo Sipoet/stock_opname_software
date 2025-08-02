@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
@@ -104,61 +106,61 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DropdownMenu<OpnameStatus>(
-                label: const Text('Status'),
-                initialSelection: opnameSession.status,
-                width: 200,
-                dropdownMenuEntries: OpnameStatus.values
-                    .map<DropdownMenuEntry<OpnameStatus>>((status) =>
-                        DropdownMenuEntry<OpnameStatus>(
-                            value: status, label: status.toString()))
-                    .toList(),
-                onSelected: (value) {
-                  opnameSession.status = value ?? opnameSession.status;
-                  opnameSessionChanged = true;
-                },
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              DropdownMenu<String>(
-                label: const Text('Lokasi'),
-                width: 200,
-                initialSelection: opnameSession.location,
-                dropdownMenuEntries: const [
-                  DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
-                  DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
-                ],
-                onSelected: (value) {
-                  opnameSession.location = value ?? opnameSession.location;
-                  opnameSessionChanged = true;
-                },
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              SizedBox(
-                width: 200,
-                child: TextFormField(
-                  decoration: const InputDecoration(
-                    label: Text('Rak'),
-                    border: OutlineInputBorder(),
-                  ),
-                  initialValue: rack,
-                  onChanged: (value) => rack = value,
-                ),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Row(
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  const Text('auto QTY 1 :'),
-                  Switch(
-                    value: isAutoQty,
-                    onChanged: (value) => setState(() {
-                      isAutoQty = value;
-                    }),
+                  DropdownMenu<OpnameStatus>(
+                    label: const Text('Status'),
+                    initialSelection: opnameSession.status,
+                    width: 180,
+                    dropdownMenuEntries: OpnameStatus.values
+                        .map<DropdownMenuEntry<OpnameStatus>>((status) =>
+                            DropdownMenuEntry<OpnameStatus>(
+                                value: status, label: status.toString()))
+                        .toList(),
+                    onSelected: (value) {
+                      opnameSession.status = value ?? opnameSession.status;
+                      opnameSessionChanged = true;
+                    },
+                  ),
+                  DropdownMenu<String>(
+                    label: const Text('Lokasi'),
+                    width: 180,
+                    initialSelection: opnameSession.location,
+                    dropdownMenuEntries: const [
+                      DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
+                      DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
+                    ],
+                    onSelected: (value) {
+                      opnameSession.location = value ?? opnameSession.location;
+                      opnameSessionChanged = true;
+                    },
+                  ),
+                  SizedBox(
+                    width: 180,
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        label: Text('Rak'),
+                        border: OutlineInputBorder(),
+                      ),
+                      initialValue: rack,
+                      onChanged: (value) => rack = value,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 150,
+                    child: Row(
+                      children: [
+                        const Text('Auto QTY 1 :'),
+                        Switch(
+                          value: isAutoQty,
+                          onChanged: (value) => setState(() {
+                            isAutoQty = value;
+                          }),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -172,7 +174,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                   child: ElevatedButton.icon(
                       onPressed: _scanBarcode,
                       icon: const Icon(Icons.camera_alt),
-                      label: const Text('Buka Kamera untuk Scan')),
+                      label: const Text('Scan')),
                 ),
               ),
               TextFormField(
@@ -195,6 +197,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 ],
                 onFieldSubmitted: (String? value) => _checkCode(value),
               ),
+              const SizedBox(
+                height: 10,
+              ),
               Visibility(
                 visible: _isFetchingItem,
                 child: const Center(
@@ -205,20 +210,39 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               ),
               Visibility(
                 visible: !_isFetchingItem,
-                child: Card(
-                  child: SizedBox(
-                      height: 250,
-                      child: ListView.builder(
+                child: Expanded(
+                  child: Card(
+                    shape: const BeveledRectangleBorder(
+                        side: BorderSide(width: 1, color: Colors.black)),
+                    borderOnForeground: true,
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: ListView.separated(
+                        separatorBuilder: (context, index) => const SizedBox(
+                          height: 8,
+                        ),
                         addAutomaticKeepAlives: false,
                         cacheExtent: 20,
-                        itemCount: opnameItems.length,
+                        itemCount: [opnameItems.length, 50].reduce(min),
                         itemBuilder: (BuildContext context, int index) {
                           OpnameItem opnameItem = opnameItems[index];
                           return ListTile(
+                              shape: const RoundedRectangleBorder(
+                                  side:
+                                      BorderSide(width: 1, color: Colors.green),
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(5))),
                               key: ObjectKey(opnameItem),
                               title: Text("Kode Item: ${opnameItem.itemCode}"),
-                              subtitle: Text(
-                                  "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                              isThreeLine: true,
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                                  Text("Rak: ${opnameItem.rackFormat}"),
+                                ],
+                              ),
                               leading: Container(
                                 constraints: const BoxConstraints(minWidth: 50),
                                 child: Column(
@@ -288,7 +312,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                                 ],
                               ));
                         },
-                      )),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -448,8 +474,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
 
   OpnameItem? findOpnameItem(String itemCode) {
     final opnameItem = opnameSession.items.firstWhere(
-      (opnameItem) =>
-          opnameItem.itemCode == itemCode && opnameItem.rack == rack,
+      (opnameItem) => opnameItem.itemCode == itemCode,
       orElse: () => OpnameItem(opnameSessionId: opnameSession.id ?? 0),
     );
     if (opnameItem.itemCode.isEmpty) {
@@ -486,10 +511,14 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     final beforeUpdatedAt = opnameItem.updatedAt;
     final beforeQuantity = opnameItem.quantity;
     opnameItem.quantity = quantity;
+    final beforeRack = opnameItem.rack;
+    opnameItem.rack.add(rack.toUpperCase());
+
     opnameItem.updatedAt = DateTime.now();
     orm.save(opnameItem).then(
         (value) => setState(() {
               opnameItem.quantity = opnameItem.quantity;
+              opnameItem.rack = opnameItem.rack;
             }), onError: (error) {
       toastification.show(
         type: ToastificationType.error,
@@ -497,6 +526,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
         autoCloseDuration: const Duration(seconds: 5),
       );
       setState(() {
+        opnameItem.rack = beforeRack;
         opnameItem.quantity = beforeQuantity;
         opnameItem.updatedAt = beforeUpdatedAt;
       });
@@ -510,7 +540,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     OpnameItem opnameItem = OpnameItem(
       itemCode: itemCode,
       quantity: quantity,
-      rack: rack,
+      rack: {rack.toUpperCase()},
       opnameSessionId: opnameSession.id ?? 0,
       updatedAt: DateTime.now(),
     );

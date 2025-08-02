@@ -335,7 +335,7 @@ class _HomePageState extends State<HomePage>
                       "Lokasi : ${opnameSession.location}",
                     ),
                     subtitle: Text(
-                        "Status ${opnameSession.status.toString()}, Tanggal: ${opnameSession.updatedAt.formatDate()}"),
+                        "Status ${opnameSession.status.toString()}, Tanggal: ${opnameSession.updatedAt.formatDatetime()}"),
                     leading: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [

@@ -102,9 +102,10 @@ class _OpnameSessionCombinatorPageState
     final sheet = excel['Sheet1'];
 
     List<OpnameItem> results = [];
-    int rowIndex = 2;
+    int rowIndex = 1;
     String itemCode;
     int quantity;
+    Set<String> rack;
     do {
       itemCode = sheet
               .cell(CellIndex.indexByColumnRow(
@@ -122,9 +123,21 @@ class _OpnameSessionCombinatorPageState
               .value
               .toString()) ??
           0;
+      rack = sheet
+              .cell(CellIndex.indexByColumnRow(
+                  columnIndex: 4, rowIndex: rowIndex))
+              .value
+              ?.toString()
+              .split(',')
+              .map<String>((e) => e.trim())
+              .toSet() ??
+          {};
       if (itemCode.isNotEmpty) {
         results.add(OpnameItem(
-            itemCode: itemCode, quantity: quantity, opnameSessionId: 9999));
+            itemCode: itemCode,
+            quantity: quantity,
+            rack: rack,
+            opnameSessionId: 9999));
       }
       rowIndex += 1;
     } while (itemCode.isNotEmpty);
@@ -137,6 +150,7 @@ class _OpnameSessionCombinatorPageState
         masterContainers[opnameItem.itemCode] = opnameItem;
       } else {
         masterContainers[opnameItem.itemCode]!.quantity += opnameItem.quantity;
+        masterContainers[opnameItem.itemCode]!.rack.addAll(opnameItem.rack);
       }
     }
   }
@@ -150,7 +164,7 @@ class _OpnameSessionCombinatorPageState
     final opnameSession = createOpnameSession();
     generateExcel(opnameSession,
         filename:
-            'stock-opname-combine-${files.length.toString()}file-${opnameSession.updatedAt.dateIso()}.xlsx');
+            'stock-opname-combine-${files.length.toString()}file-${opnameSession.updatedAt.datetimeDigit()}.xlsx');
   }
 
   OpnameSession createOpnameSession() {
