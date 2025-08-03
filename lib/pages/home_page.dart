@@ -147,7 +147,8 @@ class _HomePageState extends State<HomePage>
                       });
                       fetchItems(setStateDialog).then((isSuccess) {
                         if (isSuccess) navigator.pop();
-                      }).whenComplete(() => _isDownloading = false);
+                      }).whenComplete(
+                          () => setStateDialog(() => _isDownloading = false));
                     },
                     obscureText: true,
                     initialValue: password,
@@ -155,14 +156,20 @@ class _HomePageState extends State<HomePage>
                   ),
                   Visibility(
                     visible: _isDownloading,
-                    child: CircularProgressIndicator(
-                      color: colorScheme.onPrimary,
-                      backgroundColor: colorScheme.onPrimaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: CircularProgressIndicator(
+                        color: colorScheme.onPrimary,
+                        backgroundColor: colorScheme.onPrimaryContainer,
+                      ),
                     ),
                   ),
                   Visibility(
                       visible: currentLength >= 0,
-                      child: Text("progress: $currentLength / $totalLength")),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text("progress: $currentLength / $totalLength"),
+                      )),
                 ],
               ),
               actions: [
@@ -173,7 +180,8 @@ class _HomePageState extends State<HomePage>
                       });
                       fetchItems(setStateDialog).then((isSuccess) {
                         if (isSuccess) navigator.pop();
-                      }).whenComplete(() => _isDownloading = false);
+                      }).whenComplete(
+                          () => setStateDialog(() => _isDownloading = false));
                     },
                     child: const Text('Download')),
                 ElevatedButton(
@@ -292,12 +300,9 @@ class _HomePageState extends State<HomePage>
         item.updatedAt =
             DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
         items.add(item);
-
-        setStateDialog(() {
-          currentLength = items.length;
-        });
       }
-      var massResult = await orm.massSave(items);
+      final massResult = await orm.massSave(items);
+
       bool result = massResult
           .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)
           .toList()
