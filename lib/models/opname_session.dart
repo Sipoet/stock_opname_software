@@ -54,6 +54,12 @@ class OpnameSession extends ApplicationRecord {
   }
 
   @override
+  set pkValue(value) => id = value;
+
+  @override
+  get pkValue => id;
+
+  @override
   Map<String, Object?> toJson() {
     return {
       'updated_at': updatedAt.toIso8601String(),

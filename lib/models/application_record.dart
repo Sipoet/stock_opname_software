@@ -15,10 +15,13 @@ enum QueryOrder {
 }
 
 abstract class ApplicationRecord {
-  // String ApplicationRecord.tableName = '';
-  // String ApplicationRecord.pkField = 'id';
+  // String get tableName;
+  // String get pkField;
 
   int? id;
+  set pkValue(dynamic value);
+  dynamic get pkValue;
+
   ApplicationRecord({this.id});
 
   // static convert(Map json);
@@ -86,49 +89,79 @@ class Orm {
   }
 
   Future<int> save(ApplicationRecord model, {Transaction? transaction}) async {
-    final data = model.toJson();
-    if (data[pkField] == null) {
-      return await _create(data, transaction: transaction);
+    if (model.pkValue == null) {
+      return await _create(model, transaction: transaction);
     } else {
-      return await _update(data, transaction: transaction);
+      return await _update(model, transaction: transaction);
     }
   }
 
-  Future<bool> massSave(List<ApplicationRecord> models) async {
-    return db.transaction<bool>((trx) async {
-      for (ApplicationRecord model in models) {
-        await save(model, transaction: trx);
+  Future<List<Object?>> massSave(List<ApplicationRecord> models) async {
+    Batch batch = db.batch();
+    for (ApplicationRecord model in models) {
+      final data = model.toJson();
+      if (model.pkValue == null) {
+        batch.insert(tableName, data);
+      } else {
+        batch.update(tableName, data,
+            where: '$pkField = ?', whereArgs: [data[pkField]]);
       }
-      return true;
-    });
+    }
+    return batch.commit(
+      continueOnError: true,
+    );
   }
 
-  Future<int> _create(Map<String, Object?> data,
+  Future<int> _create(ApplicationRecord model,
       {Transaction? transaction}) async {
-    if (data[pkField] == null) {
-      data.remove(pkField);
+    final data = model.toJson();
+    if (model.pkValue != null) {
+      model.pkValue == null;
     }
     if (transaction == null) {
-      return await db.transaction<int>((txn) async {
-        return await txn.insert(tableName, data);
-      });
+      model.pkValue = await db.insert(tableName, data);
+    } else {
+      model.pkValue = await transaction.insert(tableName, data);
     }
-    return await transaction.insert(tableName, data);
+
+    return model.pkValue;
   }
 
-  Future<int> _update(Map<String, Object?> data,
+  Future<int> _update(ApplicationRecord model,
       {Transaction? transaction}) async {
+    final data = model.toJson();
     if (transaction == null) {
       return await db.update(tableName, data,
-          where: '$pkField = ?', whereArgs: [data[pkField]]);
+          where: '$pkField = ?', whereArgs: [model.pkValue]);
     }
     return await transaction.update(tableName, data,
-        where: '$pkField = ?', whereArgs: [data[pkField]]);
+        where: '$pkField = ?', whereArgs: [model.pkValue]);
   }
 
   Future<Object?> maxOf(String keyname,
       {Map<String, String> filter = const {}}) async {
-    String query = "SELECT MAX($keyname) from $tableName";
+    return reduce('MAX', keyname, filter: filter);
+  }
+
+  Future<Object?> minOf(String keyname,
+      {Map<String, String> filter = const {}}) async {
+    return reduce('MIN', keyname, filter: filter);
+  }
+
+  Future<Object?> sumOf(String keyname,
+      {Map<String, String> filter = const {}}) async {
+    return reduce('SUM', keyname, filter: filter);
+  }
+
+  Future<Object?> avgOf(String keyname,
+      {Map<String, String> filter = const {}}) async {
+    return reduce('AVG', keyname, filter: filter);
+  }
+
+  Future<Object?> reduce(String operator, String keyname,
+      {Map<String, String> filter = const {}}) async {
+    String name = '$operator($keyname)';
+    String query = "SELECT $name from $tableName";
     List filterQuery = [];
     for (String key in filter.keys.toList()) {
       final value = filter[key];
@@ -138,7 +171,7 @@ class Orm {
       query += ' WHERE ${filterQuery.join(' AND ')}';
     }
     final result = await db.rawQuery(query);
-    return result.firstOrNull?['MAX($keyname)'];
+    return result.firstOrNull?[name];
   }
 
   Future<int> delete<T extends ApplicationRecord>(id) async {

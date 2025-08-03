@@ -31,6 +31,12 @@ class Item extends ApplicationRecord {
   }
 
   @override
+  set pkValue(value) => id = value;
+
+  @override
+  get pkValue => id;
+
+  @override
   Map<String, Object?> toJson() {
     return {
       'code': code,

@@ -278,7 +278,10 @@ class _HomePageState extends State<HomePage>
           currentLength = items.length;
         });
       }
-      final result = await orm.massSave(items);
+      final massResult = await orm.massSave(items) as List<int?>;
+      bool result = massResult.reduce((value, recentResult) =>
+              value == 0 && recentResult == 0 ? 0 : 1)! >
+          0;
       if (result) {
         toastification.show(
           type: ToastificationType.success,
