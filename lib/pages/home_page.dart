@@ -100,8 +100,10 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  bool _isDownloading = false;
   openItemDownloadDialog() {
     password = '';
+    final colorScheme = Theme.of(context).colorScheme;
     showDialog(
         context: context,
         builder: (BuildContext context) {
@@ -139,13 +141,23 @@ class _HomePageState extends State<HomePage>
                   ),
                   onFieldSubmitted: (value) {
                     password = value;
+                    setState(() {
+                      _isDownloading = true;
+                    });
                     fetchItems().then((isSuccess) {
                       if (isSuccess) navigator.pop();
-                    });
+                    }).whenComplete(() => _isDownloading = false);
                   },
                   obscureText: true,
                   initialValue: password,
                   onChanged: (value) => password = value,
+                ),
+                Visibility(
+                  visible: _isDownloading,
+                  child: CircularProgressIndicator(
+                    color: colorScheme.onPrimary,
+                    backgroundColor: colorScheme.onPrimaryContainer,
+                  ),
                 ),
                 Visibility(
                     visible: currentLength >= 0,
@@ -154,9 +166,14 @@ class _HomePageState extends State<HomePage>
             ),
             actions: [
               ElevatedButton(
-                  onPressed: () => fetchItems().then((isSuccess) {
-                        if (isSuccess) navigator.pop();
-                      }),
+                  onPressed: () {
+                    setState(() {
+                      _isDownloading = true;
+                    });
+                    fetchItems().then((isSuccess) {
+                      if (isSuccess) navigator.pop();
+                    }).whenComplete(() => _isDownloading = false);
+                  },
                   child: const Text('Download')),
               ElevatedButton(
                   onPressed: () {
@@ -278,10 +295,11 @@ class _HomePageState extends State<HomePage>
           currentLength = items.length;
         });
       }
-      final massResult = await orm.massSave(items) as List<int?>;
-      bool result = massResult.reduce((value, recentResult) =>
-              value == 0 && recentResult == 0 ? 0 : 1)! >
-          0;
+      var massResult = await orm.massSave(items);
+      bool result = massResult
+          .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)
+          .toList()
+          .reduce((value, recentResult) => value && recentResult);
       if (result) {
         toastification.show(
           type: ToastificationType.success,
