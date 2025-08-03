@@ -5,6 +5,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:stock_opname_software/extensions.dart';
+import 'package:stock_opname_software/models/application_record.dart';
+import 'package:stock_opname_software/models/item.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/modules/app_updater.dart';
 import 'package:stock_opname_software/modules/list_menu.dart';
@@ -25,6 +27,7 @@ class _OpnameSessionCombinatorPageState
   Map<String, OpnameItem> masterContainers = {};
   String? location;
   List<File> files = [];
+  bool _useBaseQuantityItem = false;
   @override
   void initState() {
     db = context.read<Database>();
@@ -58,29 +61,42 @@ class _OpnameSessionCombinatorPageState
         padding: const EdgeInsets.all(10.0),
         child: Container(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: ListView.separated(
-            separatorBuilder: (context, index) => const SizedBox(
+          child: Column(children: [
+            CheckboxListTile(
+                value: _useBaseQuantityItem,
+                title: const Text('Item tidak dimasukkan dianggap nol'),
+                onChanged: (value) => setState(() {
+                      _useBaseQuantityItem = value ?? false;
+                    })),
+            const SizedBox(
               height: 10,
             ),
-            itemCount: files.length,
-            itemBuilder: (BuildContext context, int index) => ListTile(
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: Colors.black, width: 1),
-                borderRadius: BorderRadius.circular(5),
+            Expanded(
+              child: ListView.separated(
+                separatorBuilder: (context, index) => const SizedBox(
+                  height: 10,
+                ),
+                itemCount: files.length,
+                itemBuilder: (BuildContext context, int index) => ListTile(
+                  shape: RoundedRectangleBorder(
+                    side: const BorderSide(color: Colors.black, width: 1),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  dense: true,
+                  tileColor: colorScheme.onPrimary,
+                  textColor: colorScheme.primary,
+                  title: Text(files[index].path),
+                  // contentPadding: EdgeInsets.all(10),
+                  hoverColor: colorScheme.secondary,
+                  trailing: IconButton(
+                      onPressed: () => setState(() {
+                            files.removeAt(index);
+                          }),
+                      icon: const Icon(Icons.close)),
+                ),
               ),
-              dense: true,
-              tileColor: colorScheme.onPrimary,
-              textColor: colorScheme.primary,
-              title: Text(files[index].path),
-              // contentPadding: EdgeInsets.all(10),
-              hoverColor: colorScheme.secondary,
-              trailing: IconButton(
-                  onPressed: () => setState(() {
-                        files.removeAt(index);
-                      }),
-                  icon: const Icon(Icons.close)),
             ),
-          ),
+          ]),
         ),
       ),
     );
@@ -157,8 +173,19 @@ class _OpnameSessionCombinatorPageState
 
   void _combineDataExcel() async {
     masterContainers = {};
+    List<OpnameItem> opnameItems = [];
+    if (_useBaseQuantityItem) {
+      final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+      opnameItems += (await orm.finds<Item>(convert: Item.convert))
+          .map<OpnameItem>((Item item) => OpnameItem(
+              opnameSessionId: 9999,
+              itemCode: item.code,
+              quantity: 0,
+              rack: {}))
+          .toList();
+    }
     for (File file in files) {
-      var opnameItems = openExcelFile(file);
+      opnameItems += openExcelFile(file);
       combineWithMasterContainer(opnameItems);
     }
     final opnameSession = createOpnameSession();
