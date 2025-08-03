@@ -107,84 +107,86 @@ class _HomePageState extends State<HomePage>
     showDialog(
         context: context,
         builder: (BuildContext context) {
-          final navigator = Navigator.of(context);
-          return AlertDialog(
-            title: const Text('Download Item Data Form'),
-            content: Column(
-              children: [
-                TextFormField(
-                  decoration: const InputDecoration(
-                    label: Text('Host/IP address'),
-                    border: OutlineInputBorder(),
+          return StatefulBuilder(builder: (context, setStateDialog) {
+            final navigator = Navigator.of(context);
+            return AlertDialog(
+              title: const Text('Download Item Data Form'),
+              content: Column(
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      label: Text('Host/IP address'),
+                      border: OutlineInputBorder(),
+                    ),
+                    initialValue: host,
+                    onChanged: (value) => host = value,
                   ),
-                  initialValue: host,
-                  onChanged: (value) => host = value,
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                TextFormField(
-                  decoration: const InputDecoration(
-                    label: Text('Username'),
-                    border: OutlineInputBorder(),
+                  const SizedBox(
+                    height: 10,
                   ),
-                  initialValue: username,
-                  onChanged: (value) => username = value,
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                TextFormField(
-                  decoration: const InputDecoration(
-                    label: Text('Password'),
-                    border: OutlineInputBorder(),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      label: Text('Username'),
+                      border: OutlineInputBorder(),
+                    ),
+                    initialValue: username,
+                    onChanged: (value) => username = value,
                   ),
-                  onFieldSubmitted: (value) {
-                    password = value;
-                    setState(() {
-                      _isDownloading = true;
-                    });
-                    fetchItems().then((isSuccess) {
-                      if (isSuccess) navigator.pop();
-                    }).whenComplete(() => _isDownloading = false);
-                  },
-                  obscureText: true,
-                  initialValue: password,
-                  onChanged: (value) => password = value,
-                ),
-                Visibility(
-                  visible: _isDownloading,
-                  child: CircularProgressIndicator(
-                    color: colorScheme.onPrimary,
-                    backgroundColor: colorScheme.onPrimaryContainer,
+                  const SizedBox(
+                    height: 10,
                   ),
-                ),
-                Visibility(
-                    visible: currentLength >= 0,
-                    child: Text("progress: $currentLength / $totalLength")),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      label: Text('Password'),
+                      border: OutlineInputBorder(),
+                    ),
+                    onFieldSubmitted: (value) {
+                      password = value;
+                      setStateDialog(() {
+                        _isDownloading = true;
+                      });
+                      fetchItems(setStateDialog).then((isSuccess) {
+                        if (isSuccess) navigator.pop();
+                      }).whenComplete(() => _isDownloading = false);
+                    },
+                    obscureText: true,
+                    initialValue: password,
+                    onChanged: (value) => password = value,
+                  ),
+                  Visibility(
+                    visible: _isDownloading,
+                    child: CircularProgressIndicator(
+                      color: colorScheme.onPrimary,
+                      backgroundColor: colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  Visibility(
+                      visible: currentLength >= 0,
+                      child: Text("progress: $currentLength / $totalLength")),
+                ],
+              ),
+              actions: [
+                ElevatedButton(
+                    onPressed: () {
+                      setStateDialog(() {
+                        _isDownloading = true;
+                      });
+                      fetchItems(setStateDialog).then((isSuccess) {
+                        if (isSuccess) navigator.pop();
+                      }).whenComplete(() => _isDownloading = false);
+                    },
+                    child: const Text('Download')),
+                ElevatedButton(
+                    onPressed: () {
+                      navigator.pop();
+                    },
+                    style: const ButtonStyle(
+                        backgroundColor:
+                            WidgetStatePropertyAll<Color>(Colors.grey)),
+                    child: const Text('cancel')),
               ],
-            ),
-            actions: [
-              ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _isDownloading = true;
-                    });
-                    fetchItems().then((isSuccess) {
-                      if (isSuccess) navigator.pop();
-                    }).whenComplete(() => _isDownloading = false);
-                  },
-                  child: const Text('Download')),
-              ElevatedButton(
-                  onPressed: () {
-                    navigator.pop();
-                  },
-                  style: const ButtonStyle(
-                      backgroundColor:
-                          WidgetStatePropertyAll<Color>(Colors.grey)),
-                  child: const Text('cancel')),
-            ],
-          );
+            );
+          });
         });
   }
 
@@ -229,13 +231,13 @@ class _HomePageState extends State<HomePage>
   int currentLength = -1;
   int totalLength = 1;
 
-  Future<bool> fetchItems() async {
+  Future<bool> fetchItems(void Function(void Function()) setStateDialog) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
       return client;
     };
-    setState(() {
+    setStateDialog(() {
       currentLength = 0;
     });
     String? token = await login(username, password);
@@ -265,7 +267,7 @@ class _HomePageState extends State<HomePage>
             },
           ));
       List data = response.data['data'];
-      setState(() {
+      setStateDialog(() {
         totalLength = data.length;
       });
       if (data.isEmpty) {
@@ -291,7 +293,7 @@ class _HomePageState extends State<HomePage>
             DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
         items.add(item);
 
-        setState(() {
+        setStateDialog(() {
           currentLength = items.length;
         });
       }
@@ -314,7 +316,7 @@ class _HomePageState extends State<HomePage>
           autoCloseDuration: const Duration(seconds: 10),
         );
       }
-      setState(() {
+      setStateDialog(() {
         currentLength = -1;
       });
       return result;
