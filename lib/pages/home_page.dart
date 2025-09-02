@@ -238,6 +238,7 @@ class _HomePageState extends State<HomePage>
 
   int currentLength = -1;
   int totalLength = 1;
+  static const int BATCH_INSTERT = 100;
 
   Future<bool> fetchItems(void Function(void Function()) setStateDialog) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
@@ -288,7 +289,8 @@ class _HomePageState extends State<HomePage>
       }
       orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
       List<Item> items = [];
-      for (Map row in data) {
+      List<bool> results = [];
+      for (final (int index, Map row) in data.indexed) {
         final attributes = row['attributes'];
         Item item = await orm.findBy<Item>(
                 {'barcode': attributes['barcode']}, Item.convert) ??
@@ -300,13 +302,20 @@ class _HomePageState extends State<HomePage>
         item.updatedAt =
             DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
         items.add(item);
+        if (items.length >= BATCH_INSTERT) {
+          final massResult = await orm.massSave(items);
+          results = massResult
+              .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)
+              .toList();
+          items = [];
+        }
+        setStateDialog(() {
+          currentLength = index + 1;
+        });
       }
-      final massResult = await orm.massSave(items);
 
-      bool result = massResult
-          .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)
-          .toList()
-          .reduce((value, recentResult) => value && recentResult);
+      bool result =
+          results.reduce((value, recentResult) => value && recentResult);
       if (result) {
         toastification.show(
           type: ToastificationType.success,

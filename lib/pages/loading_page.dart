@@ -149,19 +149,11 @@ class _LoadingPageState extends State<LoadingPage>
         location VARCHAR(50) NOT NULL,
         updated_at DATETIME NOT NULL
       );''');
-        trx.execute('''
-        CREATE TABLE opname_items (
-        id INTEGER NOT NULL PRIMARY KEY,
-        opname_session_id INTEGER NOT NULL,
-        item_code VARCHAR(50) NOT NULL,
-        quantity INTEGER NOT NULL,
-        updated_at DATETIME NOT NULL
-      );''');
+        trx.execute('DROP TABLE opname_items;');
         oldVersion += 1;
       }
       if (oldVersion < 2) {
         trx.execute('''
-        DROP TABLE opname_items;
         CREATE TABLE opname_items (
         id INTEGER NOT NULL PRIMARY KEY,
         opname_session_id INTEGER NOT NULL,
@@ -183,6 +175,19 @@ class _LoadingPageState extends State<LoadingPage>
         keyname VARCHAR(50) NOT NULL,
         value_str VARCHAR(250) NOT NULL
       );''');
+        oldVersion += 1;
+      }
+      if (oldVersion < 3) {
+        trx.execute('''
+          CREATE TABLE IF NOT EXISTS opname_items (
+            id INTEGER NOT NULL PRIMARY KEY,
+            opname_session_id INTEGER NOT NULL,
+            rack VARCHAR(50),
+            item_code VARCHAR(50) NOT NULL,
+            quantity INTEGER NOT NULL,
+            updated_at DATETIME NOT NULL
+          );
+        ''');
         oldVersion += 1;
       }
     });
