@@ -165,10 +165,12 @@ class _HomePageState extends State<HomePage>
                     ),
                   ),
                   Visibility(
-                      visible: currentLength >= 0,
+                      visible: currentLength == -1,
                       child: Padding(
                         padding: const EdgeInsets.only(top: 10),
-                        child: Text("progress: $currentLength / $totalLength"),
+                        child: Text(currentLength == 0
+                            ? "Download Data"
+                            : "progress: $currentLength / $totalLength"),
                       )),
                 ],
               ),
@@ -238,7 +240,7 @@ class _HomePageState extends State<HomePage>
 
   int currentLength = -1;
   int totalLength = 1;
-  static const int BATCH_INSTERT = 100;
+  static const int batchInsert = 100;
 
   Future<bool> fetchItems(void Function(void Function()) setStateDialog) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
@@ -302,7 +304,7 @@ class _HomePageState extends State<HomePage>
         item.updatedAt =
             DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
         items.add(item);
-        if (items.length >= BATCH_INSTERT) {
+        if (items.length >= batchInsert) {
           final massResult = await orm.massSave(items);
           results = massResult
               .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)

@@ -36,6 +36,10 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
           TargetPlatform platform = defaultTargetPlatform;
           await _showConfirmDialog(platform) ?? false;
         } else {
+          toastification.show(
+              type: ToastificationType.info,
+              title: const Text('Aplikasi sudah versi terbaru'),
+              description: Text('versi saat ini: $localVersion'));
           return true;
         }
       }
