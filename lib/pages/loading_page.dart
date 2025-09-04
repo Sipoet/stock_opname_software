@@ -66,7 +66,7 @@ class _LoadingPageState extends State<LoadingPage>
 
     openDatabase(
       dbPath,
-      version: 2,
+      version: 3,
       onCreate: createTables,
       onUpgrade: updateTables,
       onConfigure: (db) {},
@@ -143,38 +143,38 @@ class _LoadingPageState extends State<LoadingPage>
     await db.transaction((trx) async {
       if (oldVersion < 1) {
         trx.execute('''
-      CREATE TABLE opname_sessions (
-        id INTEGER NOT NULL PRIMARY KEY,
-        status VARCHAR(50) NOT NULL,
-        location VARCHAR(50) NOT NULL,
-        updated_at DATETIME NOT NULL
-      );''');
-        trx.execute('DROP TABLE opname_items;');
+          CREATE TABLE opname_sessions (
+            id INTEGER NOT NULL PRIMARY KEY,
+            status VARCHAR(50) NOT NULL,
+            location VARCHAR(50) NOT NULL,
+            updated_at DATETIME NOT NULL
+          );
+        ''');
         oldVersion += 1;
       }
       if (oldVersion < 2) {
         trx.execute('''
-        CREATE TABLE opname_items (
-        id INTEGER NOT NULL PRIMARY KEY,
-        opname_session_id INTEGER NOT NULL,
-        rack VARCHAR(50),
-        item_code VARCHAR(50) NOT NULL,
-        quantity INTEGER NOT NULL,
-        updated_at DATETIME NOT NULL
-      );''');
+          CREATE TABLE opname_items (
+          id INTEGER NOT NULL PRIMARY KEY,
+          opname_session_id INTEGER NOT NULL,
+          rack VARCHAR(50),
+          item_code VARCHAR(50) NOT NULL,
+          quantity INTEGER NOT NULL,
+          updated_at DATETIME NOT NULL
+        );''');
         trx.execute('''CREATE TABLE items (
-        id INTEGER NOT NULL PRIMARY KEY,
-        code VARCHAR(50) NOT NULL,
-        name VARCHAR(250) NOT NULL,
-        barcode VARCHAR(20) NOT NULL UNIQUE,
-        sell_price REAL NOT NULL DEFAULT 999999,
-        updated_at DATETIME NOT NULL
-      );''');
+          id INTEGER NOT NULL PRIMARY KEY,
+          code VARCHAR(50) NOT NULL,
+          name VARCHAR(250) NOT NULL,
+          barcode VARCHAR(20) NOT NULL UNIQUE,
+          sell_price REAL NOT NULL DEFAULT 999999,
+          updated_at DATETIME NOT NULL
+        );''');
         trx.execute('''CREATE TABLE system_settings (
-        id INTEGER NOT NULL PRIMARY KEY,
-        keyname VARCHAR(50) NOT NULL,
-        value_str VARCHAR(250) NOT NULL
-      );''');
+          id INTEGER NOT NULL PRIMARY KEY,
+          keyname VARCHAR(50) NOT NULL,
+          value_str VARCHAR(250) NOT NULL
+        );''');
         oldVersion += 1;
       }
       if (oldVersion < 3) {

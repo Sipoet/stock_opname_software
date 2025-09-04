@@ -21,7 +21,10 @@ class OpnameItem extends ApplicationRecord {
     return OpnameItem(
         itemCode: json['item_code'],
         quantity: json['quantity'],
-        rack: json['rack']?.split(',').map<String>((e) => e.trim()).toSet() ??
+        rack: json['rack']
+                ?.split(',')
+                .map<String>((String rackStr) => rackStr.toString().trim())
+                .toSet() ??
             <String>{},
         updatedAt: DateTime.parse(json['updated_at']),
         id: json['id'],
