@@ -61,7 +61,7 @@ mixin ListMenu<T extends StatefulWidget> on State<T> implements AppUpdater<T> {
           key: const ValueKey('checkUpdate'),
           title: const Text('Check Update'),
           onTap: () {
-            checkUpdate();
+            checkUpdate(notifyLatestVersion: true);
           },
         ),
         ListTile(

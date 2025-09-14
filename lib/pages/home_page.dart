@@ -154,6 +154,21 @@ class _HomePageState extends State<HomePage>
                     initialValue: password,
                     onChanged: (value) => password = value,
                   ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  CheckboxListTile.adaptive(
+                    value: _isResetItem,
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        _isResetItem = value ?? false;
+                      });
+                    },
+                    title: const Text('Unduh semua item'),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
                   Visibility(
                     visible: _isDownloading,
                     child: Padding(
@@ -165,7 +180,7 @@ class _HomePageState extends State<HomePage>
                     ),
                   ),
                   Visibility(
-                      visible: currentLength == -1,
+                      visible: currentLength != -1,
                       child: Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: Text(currentLength == 0
@@ -202,6 +217,7 @@ class _HomePageState extends State<HomePage>
 
   Future<String?> login(username, password) async {
     var url = Uri.https(host, 'api/login');
+
     var response = await dio.post(url.toString(),
         data: {
           'user': {'username': username, 'password': password}
@@ -241,6 +257,7 @@ class _HomePageState extends State<HomePage>
   int currentLength = -1;
   int totalLength = 1;
   static const int batchInsert = 100;
+  bool _isResetItem = false;
 
   Future<bool> fetchItems(void Function(void Function()) setStateDialog) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
@@ -263,7 +280,7 @@ class _HomePageState extends State<HomePage>
     }
     var orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
 
-    var lastUpdated = await orm.maxOf('updated_at');
+    var lastUpdated = _isResetItem ? null : await orm.maxOf('updated_at');
     var url =
         Uri.https(host, 'api/items/download', {'last_updated_at': lastUpdated});
     try {
@@ -290,6 +307,11 @@ class _HomePageState extends State<HomePage>
         return true;
       }
       orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+      if (_isResetItem) {
+        await orm.deleteAll();
+        final totalItem = await orm.countOf('*');
+        debugPrint('====total item after reset $totalItem');
+      }
       List<Item> items = [];
       List<bool> results = [];
       for (final (int index, Map row) in data.indexed) {
@@ -477,7 +499,7 @@ class _HomePageState extends State<HomePage>
         tableName: OpnameSession.tableName,
         pkField: OpnameSession.pkField,
         db: db);
-    orm.delete(opnameSession.id).then(
+    orm.deleteById(opnameSession.id).then(
         (value) => setState(() {
               opnameSessions.remove(opnameSession);
             }),
@@ -492,7 +514,7 @@ class _HomePageState extends State<HomePage>
   void _deleteOpnameItems(OpnameSession opnameSession) {
     final orm = Orm(
         tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
-    orm.deleteWhere(where: 'opname_session_id = ?', whereArgs: [
+    orm.deleteAll(where: 'opname_session_id = ?', whereArgs: [
       opnameSession.id
     ]).then(
         (value) => setState(() {

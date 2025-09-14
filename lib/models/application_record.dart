@@ -143,6 +143,11 @@ class Orm {
     return reduce('MAX', keyname, filter: filter);
   }
 
+  Future<Object?> countOf(String keyname,
+      {Map<String, String> filter = const {}}) async {
+    return reduce('COUNT', keyname, filter: filter);
+  }
+
   Future<Object?> minOf(String keyname,
       {Map<String, String> filter = const {}}) async {
     return reduce('MIN', keyname, filter: filter);
@@ -174,12 +179,11 @@ class Orm {
     return result.firstOrNull?[name];
   }
 
-  Future<int> delete<T extends ApplicationRecord>(id) async {
+  Future<int> deleteById(id) async {
     return await db.delete(tableName, where: '$pkField = ?', whereArgs: [id]);
   }
 
-  Future<int> deleteWhere<T extends ApplicationRecord>(
-      {required String where, required List<Object?> whereArgs}) async {
+  Future<int> deleteAll({String? where, List<Object?>? whereArgs}) async {
     return await db.delete(tableName, where: where, whereArgs: whereArgs);
   }
 }

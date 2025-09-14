@@ -18,7 +18,7 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
   late String localVersion;
   String _message = '';
   final dio = Dio();
-  Future<bool> checkUpdate() async {
+  Future<bool> checkUpdate({notifyLatestVersion = false}) async {
     if (kIsWeb || !await _checkPermission()) {
       return false;
     }
@@ -35,7 +35,8 @@ mixin AppUpdater<T extends StatefulWidget> on State<T> {
         if (isOlderVersion()) {
           TargetPlatform platform = defaultTargetPlatform;
           await _showConfirmDialog(platform) ?? false;
-        } else {
+        }
+        if (notifyLatestVersion) {
           toastification.show(
               type: ToastificationType.info,
               title: const Text('Aplikasi sudah versi terbaru'),

@@ -564,7 +564,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     final db = context.read<Database>();
     final orm = Orm(
         tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
-    orm.delete(opnameItem.id).then(
+    orm.deleteById(opnameItem.id).then(
         (value) => setState(() {
               opnameSession.items.remove(opnameItem);
             }),
