@@ -142,10 +142,13 @@ class _HomePageState extends State<HomePage>
                     ),
                     onFieldSubmitted: (value) {
                       password = value;
+                      if (_isDownloading) {
+                        return;
+                      }
                       setStateDialog(() {
                         _isDownloading = true;
                       });
-                      fetchItems(setStateDialog).then((isSuccess) {
+                      downloadAndSaveItems(setStateDialog).then((isSuccess) {
                         if (isSuccess) navigator.pop();
                       }).whenComplete(
                           () => setStateDialog(() => _isDownloading = false));
@@ -191,15 +194,18 @@ class _HomePageState extends State<HomePage>
               ),
               actions: [
                 ElevatedButton(
-                    onPressed: () {
-                      setStateDialog(() {
-                        _isDownloading = true;
-                      });
-                      fetchItems(setStateDialog).then((isSuccess) {
-                        if (isSuccess) navigator.pop();
-                      }).whenComplete(
-                          () => setStateDialog(() => _isDownloading = false));
-                    },
+                    onPressed: _isDownloading
+                        ? null
+                        : () {
+                            setStateDialog(() {
+                              _isDownloading = true;
+                            });
+                            downloadAndSaveItems(setStateDialog).then(
+                                (isSuccess) {
+                              if (isSuccess) navigator.pop();
+                            }).whenComplete(() =>
+                                setStateDialog(() => _isDownloading = false));
+                          },
                     child: const Text('Download')),
                 ElevatedButton(
                     onPressed: () {
@@ -259,7 +265,8 @@ class _HomePageState extends State<HomePage>
   static const int batchInsert = 100;
   bool _isResetItem = false;
 
-  Future<bool> fetchItems(void Function(void Function()) setStateDialog) async {
+  Future<bool> downloadAndSaveItems(
+      void Function(void Function()) setStateDialog) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
@@ -278,27 +285,9 @@ class _HomePageState extends State<HomePage>
       );
       return false;
     }
-    var orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
-
-    var lastUpdated = _isResetItem ? null : await orm.maxOf('updated_at');
-    var url =
-        Uri.https(host, 'api/items/download', {'last_updated_at': lastUpdated});
     try {
-      var response = await dio.getUri(url,
-          options: Options(
-            receiveTimeout: const Duration(minutes: 20),
-            headers: {
-              'Authorization': token,
-              'X-TEST': 'test-header',
-              Headers.acceptHeader: 'application/json',
-              Headers.contentTypeHeader: 'application/json',
-            },
-          ));
-      List data = response.data['data'];
-      setStateDialog(() {
-        totalLength = data.length;
-      });
-      if (data.isEmpty) {
+      List<Item> items = await fetchItems(token);
+      if (items.isEmpty) {
         toastification.show(
           type: ToastificationType.info,
           title: const Text('Tidak ada item baru'),
@@ -306,40 +295,17 @@ class _HomePageState extends State<HomePage>
         );
         return true;
       }
-      orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+      setStateDialog(() {
+        totalLength = items.length;
+      });
+      final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
       if (_isResetItem) {
         await orm.deleteAll();
         final totalItem = await orm.countOf('*');
         debugPrint('====total item after reset $totalItem');
       }
-      List<Item> items = [];
-      List<bool> results = [];
-      for (final (int index, Map row) in data.indexed) {
-        final attributes = row['attributes'];
-        Item item = await orm.findBy<Item>(
-                {'barcode': attributes['barcode']}, Item.convert) ??
-            Item(barcode: attributes['barcode']);
-        item.code = attributes['code'] ?? '';
-        item.name = attributes['name'] ?? '';
-        item.sellPrice =
-            double.tryParse(attributes['sell_price'] ?? '') ?? item.sellPrice;
-        item.updatedAt =
-            DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
-        items.add(item);
-        if (items.length >= batchInsert) {
-          final massResult = await orm.massSave(items);
-          results = massResult
-              .map<bool>((item) => (int.tryParse(item.toString()) ?? 0) > 0)
-              .toList();
-          items = [];
-        }
-        setStateDialog(() {
-          currentLength = index + 1;
-        });
-      }
 
-      bool result =
-          results.reduce((value, recentResult) => value && recentResult);
+      bool result = await saveItems(items, setStateDialog);
       if (result) {
         toastification.show(
           type: ToastificationType.success,
@@ -351,7 +317,6 @@ class _HomePageState extends State<HomePage>
           type: ToastificationType.error,
           title: const Text('Gagal Download Item'),
           description: const Text('kontak technical support'),
-          autoCloseDuration: const Duration(seconds: 10),
         );
       }
       setStateDialog(() {
@@ -365,10 +330,84 @@ class _HomePageState extends State<HomePage>
         type: ToastificationType.error,
         title: const Text('Gagal Download Item'),
         description: Text(message),
-        autoCloseDuration: const Duration(seconds: 10),
       );
       return false;
     }
+  }
+
+  Future<List<Item>> fetchItems(String token) async {
+    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+      final client = HttpClient();
+      client.badCertificateCallback = (cert, host, port) => true;
+      return client;
+    };
+    var orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+
+    var lastUpdated = _isResetItem ? null : await orm.maxOf('updated_at');
+    var url =
+        Uri.https(host, 'api/items/download', {'last_updated_at': lastUpdated});
+
+    var response = await dio.getUri(url,
+        options: Options(
+          receiveTimeout: const Duration(minutes: 20),
+          headers: {
+            'Authorization': token,
+            'X-TEST': 'test-header',
+            Headers.acceptHeader: 'application/json',
+            Headers.contentTypeHeader: 'application/json',
+          },
+        ));
+    List data = response.data['data'];
+    if (data.isEmpty) {
+      return [];
+    }
+
+    List<Item> items = [];
+    for (final row in data) {
+      final attributes = row['attributes'];
+      Item item = await orm
+              .findBy<Item>({'barcode': attributes['barcode']}, Item.convert) ??
+          Item(barcode: attributes['barcode']);
+      item.code = attributes['code'] ?? '';
+      item.name = attributes['name'] ?? '';
+      item.sellPrice =
+          double.tryParse(attributes['sell_price'] ?? '') ?? item.sellPrice;
+      item.updatedAt =
+          DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
+      items.add(item);
+    }
+    return items;
+  }
+
+  Future<bool> saveItems(
+      List<Item> items, void Function(void Function()) setStateDialog) async {
+    final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+    List<bool> results = [];
+    if (items.isEmpty) {
+      return false;
+    }
+    List<Item> batchItems = [];
+    for (final (int index, Item item) in items.indexed) {
+      batchItems.add(item);
+      if (batchItems.length >= batchInsert) {
+        final massResult = await orm.massSave(batchItems);
+        results.addAll(massResult
+            .map<bool>((result) => (int.tryParse(result.toString()) ?? 0) > 0)
+            .toList());
+        batchItems = [];
+      }
+      setStateDialog(() {
+        currentLength = index + 1;
+      });
+    }
+    if (batchItems.isNotEmpty) {
+      final massResult = await orm.massSave(batchItems);
+      results.addAll(massResult
+          .map<bool>((result) => (int.tryParse(result.toString()) ?? 0) > 0)
+          .toList());
+      batchItems = [];
+    }
+    return results.reduce((value, recentResult) => value && recentResult);
   }
 
   void _addOpnameSession() {
