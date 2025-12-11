@@ -81,6 +81,20 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     });
   }
 
+  void _shareFile() {
+    shareFile(opnameSession).then(
+      (result) {
+        if (result == null) {
+          toastification.show(
+            type: ToastificationType.error,
+            title: const Text('Gagal share opname.'),
+            autoCloseDuration: const Duration(seconds: 5),
+          );
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     opnameItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
@@ -95,7 +109,14 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
               tooltip: 'export Excel'),
           const SizedBox(
             width: 10,
-          )
+          ),
+          IconButton(
+              onPressed: _shareFile,
+              icon: const Icon(Icons.share),
+              tooltip: 'Share'),
+          const SizedBox(
+            width: 10,
+          ),
         ],
         leading: IconButton.filled(
             onPressed: _backToHome, icon: const Icon(Icons.arrow_back)),

@@ -493,6 +493,11 @@ class _HomePageState extends State<HomePage>
                           child: const Text('Export Excel'),
                         ),
                         MenuItemButton(
+                          onPressed: () => shareFile(opnameSession),
+                          leadingIcon: const Icon(Icons.share),
+                          child: const Text('Share'),
+                        ),
+                        MenuItemButton(
                           onPressed: () => _editOpnameSession(opnameSession),
                           leadingIcon: const Icon(Icons.edit),
                           child: const Text('edit'),

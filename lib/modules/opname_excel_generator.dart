@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
@@ -10,6 +11,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:downloadsfolder/downloadsfolder.dart' as df;
+import 'package:share_plus/share_plus.dart';
 
 mixin OpnameExcelGenerator {
   int androidSdkInt = 0;
@@ -28,8 +30,23 @@ mixin OpnameExcelGenerator {
     }
   }
 
+  Future<ShareResult?> shareFile(OpnameSession opnameSession,
+      {String? text}) async {
+    final dir = await getTemporaryDirectory();
+    String? filePath = await generateExcel(opnameSession, dir: dir);
+    if (filePath == null) {
+      return null;
+    }
+    final file = XFile(filePath);
+    final params = ShareParams(
+      previewThumbnail: file,
+      files: [file],
+    );
+    return SharePlus.instance.share(params);
+  }
+
   Future<String?> generateExcel(OpnameSession opnameSession,
-      {String? filename}) async {
+      {String? filename, Directory? dir}) async {
     if (!await _checkPermission()) {
       return null;
     }
@@ -80,7 +97,12 @@ mixin OpnameExcelGenerator {
     int randomNumber = Random().nextInt(8999) + 1000;
     filename ??=
         "stock-opname-${opnameSession.updatedAt.datetimeDigit()}${randomNumber.toString()}.xlsx";
-    String? fileLocation = await _findLocation(filename);
+    String? fileLocation;
+    if (dir != null) {
+      fileLocation = df.join(dir.path, filename);
+    } else {
+      fileLocation = await _findLocation(filename);
+    }
 
     if (fileBytes != null && fileLocation != null) {
       return _saveFile(fileLocation, fileBytes, filename);
