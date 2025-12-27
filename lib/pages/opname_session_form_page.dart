@@ -57,16 +57,18 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     final orm = Orm(
         tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
 
-    orm
-        .finds<OpnameItem>(
-            convert: OpnameItem.convert,
-            filter: {'opname_session_id': opnameSession.id})
-        .then((opnameItems) => setState(() {
-              opnameSession.items = opnameItems;
-            }))
-        .whenComplete(() => setState(() {
-              _isFetchingItem = false;
-            }));
+    orm.finds<OpnameItem>(convert: OpnameItem.convert, filter: {
+      'opname_session_id': opnameSession.id
+    }).then((opnameItems) async {
+      for (var opnameItem in opnameItems) {
+        opnameItem.item = await fetchItem(opnameItem.itemCode);
+      }
+      setState(() {
+        opnameSession.items = opnameItems;
+      });
+    }).whenComplete(() => setState(() {
+          _isFetchingItem = false;
+        }));
   }
 
   void _scanBarcode() {
@@ -259,6 +261,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
+                                  Text("Nama Item: ${opnameItem.item?.name}"),
                                   Text(
                                       "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
                                   Text("Rak: ${opnameItem.rackFormat}"),
@@ -364,12 +367,16 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     });
   }
 
+  Future<Item?> fetchItem(String barcode) {
+    final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
+    return orm.findBy<Item>({'barcode': barcode}, Item.convert);
+  }
+
   void _checkCode(String? value) async {
     if (value == null || value.isEmpty) {
       return;
     }
-    final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
-    Item? item = await orm.findBy<Item>({'barcode': value}, Item.convert);
+    Item? item = await fetchItem(value.trim());
     if (item == null) {
       setState(() {
         barcodeError = 'barcode tidak ditemukan';
@@ -511,7 +518,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     }
     OpnameItem? opnameItem = findOpnameItem(item.code);
     if (opnameItem == null) {
-      _insertOpnameItem(item.code, quantity);
+      _insertOpnameItem(item, quantity);
     } else {
       _updateOpnameItem(opnameItem, quantity: opnameItem.quantity + quantity);
     }
@@ -554,12 +561,13 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     });
   }
 
-  void _insertOpnameItem(String itemCode, int quantity) {
+  void _insertOpnameItem(Item item, int quantity) {
     final db = context.read<Database>();
     final orm = Orm(
         tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
     OpnameItem opnameItem = OpnameItem(
-      itemCode: itemCode,
+      itemCode: item.code,
+      item: item,
       quantity: quantity,
       rack: {rack.toUpperCase()},
       opnameSessionId: opnameSession.id ?? 0,

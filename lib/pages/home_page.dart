@@ -223,24 +223,27 @@ class _HomePageState extends State<HomePage>
 
   Future<String?> login(username, password) async {
     var url = Uri.https(host, 'api/login');
-
-    var response = await dio.post(url.toString(),
-        data: {
-          'user': {'username': username, 'password': password}
-        },
-        options: Options(responseType: ResponseType.json));
-    if (response.statusCode != 200) {
-      toastification.show(
-        type: ToastificationType.error,
-        title: const Text('Gagal Download Item'),
-        description:
-            Text(response.data['message'] ?? 'Username/password salah'),
-        autoCloseDuration: const Duration(seconds: 5),
-      );
+    try {
+      var response = await dio.post(url.toString(),
+          data: {
+            'user': {'username': username, 'password': password}
+          },
+          options: Options(responseType: ResponseType.json));
+      if (response.statusCode != 200) {
+        toastification.show(
+          type: ToastificationType.error,
+          title: const Text('Gagal Download Item'),
+          description:
+              Text(response.data['message'] ?? 'Username/password salah'),
+          autoCloseDuration: const Duration(seconds: 5),
+        );
+        return null;
+      }
+      saveHosts();
+      return response.headers.value('Authorization');
+    } catch (e) {
       return null;
     }
-    saveHosts();
-    return response.headers.value('Authorization');
   }
 
   void saveHosts() async {
@@ -262,7 +265,7 @@ class _HomePageState extends State<HomePage>
 
   int currentLength = -1;
   int totalLength = 1;
-  static const int batchInsert = 100;
+  static const int insertBatch = 50;
   bool _isResetItem = false;
 
   Future<bool> downloadAndSaveItems(
@@ -365,15 +368,19 @@ class _HomePageState extends State<HomePage>
     List<Item> items = [];
     for (final row in data) {
       final attributes = row['attributes'];
-      Item item = await orm
-              .findBy<Item>({'barcode': attributes['barcode']}, Item.convert) ??
-          Item(barcode: attributes['barcode']);
-      item.code = attributes['code'] ?? '';
-      item.name = attributes['name'] ?? '';
-      item.sellPrice =
-          double.tryParse(attributes['sell_price'] ?? '') ?? item.sellPrice;
-      item.updatedAt =
-          DateTime.tryParse(attributes['updated_at']) ?? item.updatedAt;
+      String barcode =
+          (attributes['barcode'] ?? attributes['code']).toString().trim();
+      if (barcode.isEmpty) {
+        debugPrint('barcode ${attributes.toString()} not found');
+      }
+      Item item = await orm.findBy<Item>({'barcode': barcode}, Item.convert) ??
+          Item(barcode: barcode);
+      item.code = attributes['code'].toString().trim();
+      item.name = attributes['name'].toString().trim();
+      item.sellPrice = double.tryParse(attributes['sell_price'].toString()) ??
+          item.sellPrice;
+      item.updatedAt = DateTime.tryParse(attributes['updated_at'].toString()) ??
+          item.updatedAt;
       items.add(item);
     }
     return items;
@@ -382,32 +389,43 @@ class _HomePageState extends State<HomePage>
   Future<bool> saveItems(
       List<Item> items, void Function(void Function()) setStateDialog) async {
     final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
-    List<bool> results = [];
+
     if (items.isEmpty) {
       return false;
     }
     List<Item> batchItems = [];
-    for (final (int index, Item item) in items.indexed) {
-      batchItems.add(item);
-      if (batchItems.length >= batchInsert) {
-        final massResult = await orm.massSave(batchItems);
-        results.addAll(massResult
-            .map<bool>((result) => (int.tryParse(result.toString()) ?? 0) > 0)
-            .toList());
-        batchItems = [];
+
+    for (int index = 0; index <= items.length; index += insertBatch) {
+      int? endIndex = index + insertBatch;
+      if (items.length - 1 < endIndex) {
+        endIndex = null;
       }
+      batchItems = items.sublist(index, endIndex);
+      int trying = 0;
+      bool result = false;
+      do {
+        List<Object?> massIds = await orm.massSave(batchItems);
+        result = !massIds
+            .any((result) => (int.tryParse(result.toString()) ?? 0) == 0);
+        trying += 1;
+      } while (result && trying > 4);
       setStateDialog(() {
         currentLength = index + 1;
       });
     }
-    if (batchItems.isNotEmpty) {
-      final massResult = await orm.massSave(batchItems);
-      results.addAll(massResult
-          .map<bool>((result) => (int.tryParse(result.toString()) ?? 0) > 0)
-          .toList());
-      batchItems = [];
+
+    for (Item item in items) {
+      final localItem =
+          await orm.findBy<Item>({'barcode': item.barcode}, Item.convert);
+      if (localItem == null) {
+        final tResult = await orm.save(item);
+        if (tResult == 0) {
+          debugPrint('barcode: ${item.barcode} not saved');
+          return false;
+        }
+      }
     }
-    return results.reduce((value, recentResult) => value && recentResult);
+    return true;
   }
 
   void _addOpnameSession() {

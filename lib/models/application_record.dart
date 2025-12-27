@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 
 enum QueryOrder {
@@ -101,10 +102,13 @@ class Orm {
     for (ApplicationRecord model in models) {
       final data = model.toJson();
       if (model.pkValue == null) {
-        batch.insert(tableName, data);
+        batch.insert(tableName, data,
+            conflictAlgorithm: ConflictAlgorithm.rollback);
       } else {
         batch.update(tableName, data,
-            where: '$pkField = ?', whereArgs: [data[pkField]]);
+            where: '$pkField = ?',
+            whereArgs: [data[pkField]],
+            conflictAlgorithm: ConflictAlgorithm.rollback);
       }
     }
     return batch.commit(
@@ -118,10 +122,14 @@ class Orm {
     if (model.pkValue != null) {
       model.pkValue == null;
     }
-    if (transaction == null) {
-      model.pkValue = await db.insert(tableName, data);
-    } else {
-      model.pkValue = await transaction.insert(tableName, data);
+    try {
+      if (transaction == null) {
+        model.pkValue = await db.insert(tableName, data);
+      } else {
+        model.pkValue = await transaction.insert(tableName, data);
+      }
+    } catch (e) {
+      debugPrint('error sql: ${e.toString()}');
     }
 
     return model.pkValue;

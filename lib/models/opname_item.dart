@@ -1,4 +1,5 @@
 import 'package:stock_opname_software/models/application_record.dart';
+import 'package:stock_opname_software/models/item.dart';
 
 class OpnameItem extends ApplicationRecord {
   static const tableName = 'opname_items';
@@ -8,11 +9,13 @@ class OpnameItem extends ApplicationRecord {
   int quantity;
   Set<String> rack;
   DateTime updatedAt;
+  Item? item;
   OpnameItem(
       {this.itemCode = '',
       this.quantity = 0,
       DateTime? updatedAt,
       super.id,
+      this.item,
       this.rack = const {},
       required this.opnameSessionId})
       : updatedAt = updatedAt ?? DateTime.now();
