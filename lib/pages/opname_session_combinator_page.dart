@@ -165,7 +165,15 @@ class _OpnameSessionCombinatorPageState
       if (masterContainers[opnameItem.itemCode] == null) {
         masterContainers[opnameItem.itemCode] = opnameItem;
       } else {
+        if (opnameItem.itemCode == '23010001') {
+          debugPrint(
+              'quantity awal ${masterContainers[opnameItem.itemCode]!.quantity} ditambah ${opnameItem.quantity}');
+        }
         masterContainers[opnameItem.itemCode]!.quantity += opnameItem.quantity;
+        if (opnameItem.itemCode == '23010001') {
+          debugPrint(
+              'quantity akhir ${masterContainers[opnameItem.itemCode]!.quantity} ');
+        }
         masterContainers[opnameItem.itemCode]!.rack.addAll(opnameItem.rack);
       }
     }
@@ -186,8 +194,8 @@ class _OpnameSessionCombinatorPageState
     }
     for (File file in files) {
       opnameItems += openExcelFile(file);
-      combineWithMasterContainer(opnameItems);
     }
+    combineWithMasterContainer(opnameItems);
     final opnameSession = createOpnameSession();
     generateExcel(opnameSession,
         filename:
