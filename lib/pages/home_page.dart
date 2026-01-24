@@ -347,8 +347,8 @@ class _HomePageState extends State<HomePage>
     var orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
 
     var lastUpdated = _isResetItem ? null : await orm.maxOf('updated_at');
-    var url =
-        Uri.https(host, 'api/items/download', {'last_updated_at': lastUpdated});
+    var url = Uri.https(
+        host, 'api/ipos/items/download', {'last_updated_at': lastUpdated});
 
     var response = await dio.getUri(url,
         options: Options(
