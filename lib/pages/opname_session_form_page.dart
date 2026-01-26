@@ -9,6 +9,7 @@ import 'package:stock_opname_software/models/item.dart';
 import 'package:stock_opname_software/models/opname_session.dart';
 import 'package:stock_opname_software/extensions.dart';
 import 'package:stock_opname_software/modules/confirm_dialog.dart';
+import 'package:stock_opname_software/modules/download_item_dialog.dart';
 import 'package:stock_opname_software/modules/opname_excel_generator.dart';
 import 'package:stock_opname_software/modules/platform_checker.dart';
 import 'package:stock_opname_software/thousand_separator_formatter.dart';
@@ -26,7 +27,11 @@ class OpnameSessionFormPage extends StatefulWidget {
 }
 
 class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
-    with OpnameExcelGenerator, ConfirmDialog, PlatformChecker {
+    with
+        OpnameExcelGenerator,
+        ConfirmDialog,
+        PlatformChecker,
+        DonwloadItemDialog {
   OpnameSession get opnameSession => widget.opnameSession;
   List<OpnameItem> get opnameItems => widget.opnameSession.items;
   final _focusNode = FocusNode();
@@ -367,9 +372,15 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     });
   }
 
-  Future<Item?> fetchItem(String barcode) {
+  Future<Item?> fetchItem(String barcode) async {
     final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
-    return orm.findBy<Item>({'barcode': barcode}, Item.convert);
+    Item? item;
+
+    item = await orm.findBy<Item>({'barcode': barcode}, Item.convert);
+    if (item != null) {
+      return item;
+    }
+    return downloadAndSaveItem(barcode, db);
   }
 
   void _checkCode(String? value) async {
