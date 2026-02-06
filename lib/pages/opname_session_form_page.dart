@@ -268,6 +268,8 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                                 children: [
                                   Text("Nama Item: ${opnameItem.item?.name}"),
                                   Text(
+                                      "Harga Jual: Rp.${opnameItem.item?.sellPrice.format()}"),
+                                  Text(
                                       "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
                                   Text("Rak: ${opnameItem.rackFormat}"),
                                 ],
@@ -305,8 +307,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                                 menuChildren: [
                                   MenuItemButton(
                                     onPressed: () {
-                                      _openInputQuantityModal(
-                                              opnameItem.itemCode,
+                                      _openInputQuantityModal(opnameItem.item!,
                                               quantity: opnameItem.quantity,
                                               focusNode: FocusNode())
                                           .then((int? quantity) {
@@ -406,7 +407,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
       return;
     }
     final focusNode2 = FocusNode();
-    _openInputQuantityModal(value, focusNode: focusNode2).then((int? quantity) {
+    _openInputQuantityModal(item, focusNode: focusNode2).then((int? quantity) {
       if (quantity != null) {
         _updateOpname(item, quantity);
         _qtyController.text = '';
@@ -417,7 +418,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     });
   }
 
-  Future<int?> _openInputQuantityModal(String itemCode,
+  Future<int?> _openInputQuantityModal(Item item,
       {FocusNode? focusNode, int? quantity}) {
     focusNode?.requestFocus();
     _qtyController.text = quantity?.toString() ?? '';
@@ -445,7 +446,37 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                               fontSize: 16),
                           children: <TextSpan>[
                             TextSpan(
-                                text: itemCode,
+                                text: item.code,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.normal)),
+                          ],
+                        ),
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          text: 'Nama Item : ',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontSize: 16),
+                          children: <TextSpan>[
+                            TextSpan(
+                                text: item.name,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.normal)),
+                          ],
+                        ),
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          text: 'Harga Jual Item : ',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontSize: 16),
+                          children: <TextSpan>[
+                            TextSpan(
+                                text: "Rp.${item.sellPrice.format()}",
                                 style: const TextStyle(
                                     fontWeight: FontWeight.normal)),
                           ],
@@ -465,7 +496,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                           ThousandSeparatorFormatter(),
                         ],
                         onFieldSubmitted: (value) =>
-                            onSubmitted(focusNode, itemCode),
+                            onSubmitted(focusNode, item.code),
                       ),
                       const SizedBox(
                         height: 15,
@@ -473,7 +504,8 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       Row(
                         children: [
                           ElevatedButton(
-                              onPressed: () => onSubmitted(focusNode, itemCode),
+                              onPressed: () =>
+                                  onSubmitted(focusNode, item.code),
                               child: const Text('submit')),
                           const SizedBox(
                             width: 10,
