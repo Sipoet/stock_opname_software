@@ -138,6 +138,18 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                 spacing: 10,
                 runSpacing: 10,
                 children: [
+                  SizedBox(
+                    width: 300,
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        label: Text('Nama/keterangan'),
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLength: 69,
+                      initialValue: opnameSession.name,
+                      onChanged: (value) => opnameSession.name = value,
+                    ),
+                  ),
                   DropdownMenu<OpnameStatus>(
                     label: const Text('Status'),
                     initialSelection: opnameSession.status,
@@ -164,17 +176,6 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       opnameSession.location = value ?? opnameSession.location;
                       opnameSessionChanged = true;
                     },
-                  ),
-                  SizedBox(
-                    width: 180,
-                    child: TextFormField(
-                      decoration: const InputDecoration(
-                        label: Text('Rak'),
-                        border: OutlineInputBorder(),
-                      ),
-                      initialValue: rack,
-                      onChanged: (value) => rack = value,
-                    ),
                   ),
                   SizedBox(
                     width: 150,
@@ -205,25 +206,49 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       label: const Text('Scan')),
                 ),
               ),
-              TextFormField(
-                focusNode: _focusNode,
-                controller: _itemCodeController,
-                forceErrorText: barcodeError,
-                decoration: InputDecoration(
-                  label: const Text('Kode Item/barcode'),
-                  icon: IconButton(
+              Row(
+                children: [
+                  SizedBox(
+                    width: 180,
+                    child: TextFormField(
+                      decoration: const InputDecoration(
+                        label: Text('Rak'),
+                        border: OutlineInputBorder(),
+                      ),
+                      initialValue: rack,
+                      onChanged: (value) => rack = value,
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 25,
+                  ),
+                  Expanded(
+                    child: TextFormField(
+                      focusNode: _focusNode,
+                      controller: _itemCodeController,
+                      forceErrorText: barcodeError,
+                      decoration: InputDecoration(
+                        label: const Text('Kode Item/barcode'),
+                        suffixIcon: IconButton(
+                          onPressed: _itemCodeController.clear,
+                          icon: const Icon(Icons.clear),
+                        ),
+                      ),
+                      keyboardType: TextInputType.visiblePassword,
+                      inputFormatters: <TextInputFormatter>[
+                        FilteringTextInputFormatter.allow(
+                            RegExp("[0-9a-zA-Z]")),
+                      ],
+                      onFieldSubmitted: (String? value) => _checkCode(value),
+                    ),
+                  ),
+                  const SizedBox(
+                    width: 25,
+                  ),
+                  IconButton(
                       onPressed: () => _checkCode(_itemCodeController.text),
                       icon: const Icon(Icons.subdirectory_arrow_left)),
-                  suffixIcon: IconButton(
-                    onPressed: _itemCodeController.clear,
-                    icon: const Icon(Icons.clear),
-                  ),
-                ),
-                keyboardType: TextInputType.visiblePassword,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp("[0-9a-zA-Z]")),
                 ],
-                onFieldSubmitted: (String? value) => _checkCode(value),
               ),
               const SizedBox(
                 height: 10,

@@ -66,7 +66,7 @@ class _LoadingPageState extends State<LoadingPage>
 
     openDatabase(
       dbPath,
-      version: 3,
+      version: 4,
       onCreate: createTables,
       onUpgrade: updateTables,
       onConfigure: (db) {},
@@ -187,6 +187,12 @@ class _LoadingPageState extends State<LoadingPage>
             quantity INTEGER NOT NULL,
             updated_at DATETIME NOT NULL
           );
+        ''');
+        oldVersion += 1;
+      }
+      if (oldVersion < 4) {
+        trx.execute('''
+          ALTER TABLE opname_sessions ADD COLUMN name VARCHAR(70);
         ''');
         oldVersion += 1;
       }

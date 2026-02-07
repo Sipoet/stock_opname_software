@@ -33,6 +33,7 @@ class OpnameSession extends ApplicationRecord {
   static const pkField = 'id';
   DateTime updatedAt;
   String location;
+  String name;
   OpnameStatus status;
   List<OpnameItem> items;
   OpnameSession({
@@ -40,14 +41,16 @@ class OpnameSession extends ApplicationRecord {
     this.location = 'TOKO',
     this.status = OpnameStatus.open,
     super.id,
+    this.name = '',
     items,
   })  : items = items ?? <OpnameItem>[],
         updatedAt = updatedAt ?? DateTime.now();
 
-  static OpnameSession convert(json) {
+  factory OpnameSession.convert(Map json) {
     return OpnameSession(
       updatedAt: DateTime.parse(json['updated_at']),
       location: json['location'],
+      name: json['name'] ?? '',
       status: OpnameStatus.fromString(json['status']) ?? OpnameStatus.open,
       id: json['id'],
     );
@@ -65,6 +68,7 @@ class OpnameSession extends ApplicationRecord {
       'updated_at': updatedAt.toIso8601String(),
       'location': location,
       'status': status.toString(),
+      'name': name,
       'id': id,
     };
   }
