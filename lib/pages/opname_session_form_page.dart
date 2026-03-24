@@ -206,7 +206,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       label: const Text('Scan')),
                 ),
               ),
-              Row(
+              Wrap(
+                runSpacing: 10,
+                spacing: 15,
                 children: [
                   SizedBox(
                     width: 180,
@@ -222,16 +224,29 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                   const SizedBox(
                     width: 25,
                   ),
-                  Expanded(
+                  SizedBox(
+                    width: 250,
                     child: TextFormField(
                       focusNode: _focusNode,
                       controller: _itemCodeController,
                       forceErrorText: barcodeError,
+                      onChanged: (value) => setState(() {}),
                       decoration: InputDecoration(
                         label: const Text('Kode Item/barcode'),
-                        suffixIcon: IconButton(
-                          onPressed: _itemCodeController.clear,
-                          icon: const Icon(Icons.clear),
+                        suffix: Wrap(
+                          spacing: 20,
+                          children: [
+                            if (_itemCodeController.text.isNotEmpty)
+                              IconButton(
+                                onPressed: _itemCodeController.clear,
+                                icon: const Icon(Icons.clear),
+                              ),
+                            IconButton(
+                                onPressed: () =>
+                                    _checkCode(_itemCodeController.text),
+                                icon:
+                                    const Icon(Icons.subdirectory_arrow_left)),
+                          ],
                         ),
                       ),
                       keyboardType: TextInputType.visiblePassword,
@@ -242,12 +257,6 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                       onFieldSubmitted: (String? value) => _checkCode(value),
                     ),
                   ),
-                  const SizedBox(
-                    width: 25,
-                  ),
-                  IconButton(
-                      onPressed: () => _checkCode(_itemCodeController.text),
-                      icon: const Icon(Icons.subdirectory_arrow_left)),
                 ],
               ),
               const SizedBox(
