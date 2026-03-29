@@ -490,7 +490,8 @@ class _HomePageState extends State<HomePage>
                             opnameSession.items = await orm.finds<OpnameItem>(
                                 filter: {'opname_session_id': opnameSession.id},
                                 convert: OpnameItem.convert);
-                            generateExcel(opnameSession).then((fileLocation) {
+                            downloadOpnameExcel(opnameSession)
+                                .then((fileLocation) {
                               if (fileLocation == null) {
                                 toastification.show(
                                   type: ToastificationType.error,
@@ -501,7 +502,12 @@ class _HomePageState extends State<HomePage>
                                 toastification.show(
                                   type: ToastificationType.success,
                                   title: const Text('Success export excel.'),
-                                  description: Text('save at $fileLocation'),
+                                  description: Tooltip(
+                                      message: 'save at $fileLocation',
+                                      child: Text(
+                                        'save at $fileLocation',
+                                        overflow: TextOverflow.ellipsis,
+                                      )),
                                   autoCloseDuration: const Duration(seconds: 5),
                                 );
                               }

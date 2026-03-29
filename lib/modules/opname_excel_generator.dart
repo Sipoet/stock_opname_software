@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 
@@ -10,7 +11,6 @@ import 'package:stock_opname_software/extensions.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:downloadsfolder/downloadsfolder.dart' as df;
 import 'package:share_plus/share_plus.dart';
 
 mixin OpnameExcelGenerator {
@@ -33,10 +33,13 @@ mixin OpnameExcelGenerator {
   Future<ShareResult?> shareFile(OpnameSession opnameSession,
       {String? text}) async {
     final dir = await getTemporaryDirectory();
-    String? filePath = await generateExcel(opnameSession, dir: dir);
-    if (filePath == null) {
+    final filename = _generateFilename(opnameSession);
+    final filePath = p.join(dir.path, filename);
+    final data = await generateExcel(opnameSession, filename: filename);
+    if (data == null) {
       return null;
     }
+    File(filePath).writeAsBytesSync(data);
     final file = XFile(filePath);
     final params = ShareParams(
       previewThumbnail: file,
@@ -45,8 +48,8 @@ mixin OpnameExcelGenerator {
     return SharePlus.instance.share(params);
   }
 
-  Future<String?> generateExcel(OpnameSession opnameSession,
-      {String? filename, Directory? dir}) async {
+  Future<Uint8List?> generateExcel(OpnameSession opnameSession,
+      {String? filename}) async {
     if (!await _checkPermission()) {
       return null;
     }
@@ -93,55 +96,32 @@ mixin OpnameExcelGenerator {
           CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: index + 1));
       cell.value = TextCellValue(opnameItem.rackFormat);
     }
-    var fileBytes = excel.save();
-    int randomNumber = Random().nextInt(8999) + 1000;
-    filename ??=
-        "stock-opname-${opnameSession.updatedAt.datetimeDigit()}${randomNumber.toString()}.xlsx";
-    String? fileLocation;
-    if (dir != null) {
-      fileLocation = df.join(dir.path, filename);
-    } else {
-      fileLocation = await _findLocation(filename);
-    }
-
-    if (fileBytes != null && fileLocation != null) {
-      return _saveFile(fileLocation, fileBytes, filename);
-    } else {
+    filename ??= _generateFilename(opnameSession);
+    final bytes = excel.save(fileName: filename);
+    if (bytes == null) {
       return null;
     }
+    return Uint8List.fromList(bytes);
   }
 
-  Future<String?> _saveFile(
-      String fileLocation, List<int> fileBytes, String filename) async {
-    late File file;
-    try {
-      file = File(fileLocation)
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(fileBytes);
-      return fileLocation;
-    } catch (e) {
-      final dir = await getApplicationCacheDirectory();
-      final newFileLocation = p.join(dir.path, filename);
-      file = File(newFileLocation)
-        ..createSync(recursive: true)
-        ..writeAsBytesSync(fileBytes);
-      await df.copyFileIntoDownloadFolder(newFileLocation, filename,
-          file: file, desiredExtension: 'xlsx');
-      file.delete();
-      return fileLocation;
-    }
+  String _generateFilename(OpnameSession opnameSession) {
+    int randomNumber = Random().nextInt(8999) + 1000;
+    return "stock-opname-${opnameSession.updatedAt.datetimeDigit()}${randomNumber.toString()}.xlsx";
   }
 
-  Future<String?> _findLocation(String filename) async {
-    Directory dir = await df.getDownloadDirectory();
-    if (Platform.isAndroid) {
-      return p.join(dir.path, filename);
+  Future<String?> downloadOpnameExcel(OpnameSession opnameSession,
+      {String? filename, Directory? dir}) async {
+    final data = await generateExcel(opnameSession);
+    if (data == null) {
+      return null;
     }
+    filename ??= _generateFilename(opnameSession);
     return await FilePicker.platform.saveFile(
         dialogTitle: 'Simpan Excel opname di',
         type: FileType.custom,
-        initialDirectory: dir.path,
+        initialDirectory: dir?.path,
         allowedExtensions: ['xlsx'],
-        fileName: filename);
+        fileName: filename,
+        bytes: data);
   }
 }

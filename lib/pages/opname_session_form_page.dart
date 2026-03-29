@@ -392,7 +392,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   }
 
   void _generateExcel() {
-    generateExcel(opnameSession).then((fileLocation) {
+    downloadOpnameExcel(opnameSession).then((fileLocation) {
       if (fileLocation == null) {
         toastification.show(
           type: ToastificationType.error,

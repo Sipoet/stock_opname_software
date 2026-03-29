@@ -197,7 +197,7 @@ class _OpnameSessionCombinatorPageState
     }
     combineWithMasterContainer(opnameItems);
     final opnameSession = createOpnameSession();
-    generateExcel(opnameSession,
+    downloadOpnameExcel(opnameSession,
         filename:
             'stock-opname-combine-${files.length.toString()}file-${opnameSession.updatedAt.datetimeDigit()}.xlsx');
   }
