@@ -105,6 +105,9 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   @override
   Widget build(BuildContext context) {
     opnameItems.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    final size = MediaQuery.of(context).size;
+    final padding = MediaQuery.of(context).padding;
+    final cardOpnameHeight = size.height - padding.top - padding.bottom - 300;
     return Scaffold(
       appBar: AppBar(
         title: Text("Session at: ${opnameSession.updatedAt.formatDate()}"),
@@ -131,257 +134,257 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Center(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  SizedBox(
-                    width: 300,
-                    child: TextFormField(
-                      decoration: const InputDecoration(
-                        label: Text('Nama/keterangan'),
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLength: 69,
-                      initialValue: opnameSession.name,
-                      onChanged: (value) => opnameSession.name = value,
-                    ),
-                  ),
-                  DropdownMenu<OpnameStatus>(
-                    label: const Text('Status'),
-                    initialSelection: opnameSession.status,
-                    width: 180,
-                    dropdownMenuEntries: OpnameStatus.values
-                        .map<DropdownMenuEntry<OpnameStatus>>((status) =>
-                            DropdownMenuEntry<OpnameStatus>(
-                                value: status, label: status.toString()))
-                        .toList(),
-                    onSelected: (value) {
-                      opnameSession.status = value ?? opnameSession.status;
-                      opnameSessionChanged = true;
-                    },
-                  ),
-                  DropdownMenu<String>(
-                    label: const Text('Lokasi'),
-                    width: 180,
-                    initialSelection: opnameSession.location,
-                    dropdownMenuEntries: const [
-                      DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
-                      DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
-                    ],
-                    onSelected: (value) {
-                      opnameSession.location = value ?? opnameSession.location;
-                      opnameSessionChanged = true;
-                    },
-                  ),
-                  SizedBox(
-                    width: 150,
-                    child: Row(
-                      children: [
-                        const Text('Auto QTY 1 :'),
-                        Switch(
-                          value: isAutoQty,
-                          onChanged: (value) => setState(() {
-                            isAutoQty = value;
-                          }),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    SizedBox(
+                      width: 300,
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          label: Text('Nama/keterangan'),
+                          border: OutlineInputBorder(),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 20,
-              ),
-              Offstage(
-                offstage: !isNativeMobileDevice(),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: ElevatedButton.icon(
-                      onPressed: _scanBarcode,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Scan')),
-                ),
-              ),
-              Wrap(
-                runSpacing: 10,
-                spacing: 15,
-                children: [
-                  SizedBox(
-                    width: 180,
-                    child: TextFormField(
-                      decoration: const InputDecoration(
-                        label: Text('Rak'),
-                        border: OutlineInputBorder(),
+                        maxLength: 69,
+                        initialValue: opnameSession.name,
+                        onChanged: (value) => opnameSession.name = value,
                       ),
-                      initialValue: rack,
-                      onChanged: (value) => rack = value,
                     ),
-                  ),
-                  const SizedBox(
-                    width: 25,
-                  ),
-                  SizedBox(
-                    width: 250,
-                    child: TextFormField(
-                      focusNode: _focusNode,
-                      controller: _itemCodeController,
-                      forceErrorText: barcodeError,
-                      onChanged: (value) => setState(() {}),
-                      decoration: InputDecoration(
-                        label: const Text('Kode Item/barcode'),
-                        suffix: Wrap(
-                          spacing: 20,
-                          children: [
-                            if (_itemCodeController.text.isNotEmpty)
+                    DropdownMenu<OpnameStatus>(
+                      label: const Text('Status'),
+                      initialSelection: opnameSession.status,
+                      width: 180,
+                      dropdownMenuEntries: OpnameStatus.values
+                          .map<DropdownMenuEntry<OpnameStatus>>((status) =>
+                              DropdownMenuEntry<OpnameStatus>(
+                                  value: status, label: status.toString()))
+                          .toList(),
+                      onSelected: (value) {
+                        opnameSession.status = value ?? opnameSession.status;
+                        opnameSessionChanged = true;
+                      },
+                    ),
+                    DropdownMenu<String>(
+                      label: const Text('Lokasi'),
+                      width: 180,
+                      initialSelection: opnameSession.location,
+                      dropdownMenuEntries: const [
+                        DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
+                        DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
+                      ],
+                      onSelected: (value) {
+                        opnameSession.location =
+                            value ?? opnameSession.location;
+                        opnameSessionChanged = true;
+                      },
+                    ),
+                    SizedBox(
+                      width: 150,
+                      child: Row(
+                        children: [
+                          const Text('Auto QTY 1 :'),
+                          Switch(
+                            value: isAutoQty,
+                            onChanged: (value) => setState(() {
+                              isAutoQty = value;
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(
+                  height: 20,
+                ),
+                Wrap(
+                  runSpacing: 10,
+                  spacing: 15,
+                  children: [
+                    SizedBox(
+                      width: 180,
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          label: Text('Rak'),
+                          border: OutlineInputBorder(),
+                        ),
+                        initialValue: rack,
+                        onChanged: (value) => rack = value,
+                      ),
+                    ),
+                    Offstage(
+                      offstage: !isNativeMobileDevice(),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: ElevatedButton.icon(
+                            onPressed: _scanBarcode,
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Scan')),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 250,
+                      child: TextFormField(
+                        focusNode: _focusNode,
+                        controller: _itemCodeController,
+                        forceErrorText: barcodeError,
+                        onChanged: (value) => setState(() {}),
+                        decoration: InputDecoration(
+                          label: const Text('Kode Item/barcode'),
+                          suffix: Wrap(
+                            spacing: 20,
+                            children: [
+                              if (_itemCodeController.text.isNotEmpty)
+                                IconButton(
+                                  onPressed: _itemCodeController.clear,
+                                  icon: const Icon(Icons.clear),
+                                ),
                               IconButton(
-                                onPressed: _itemCodeController.clear,
-                                icon: const Icon(Icons.clear),
-                              ),
-                            IconButton(
-                                onPressed: () =>
-                                    _checkCode(_itemCodeController.text),
-                                icon:
-                                    const Icon(Icons.subdirectory_arrow_left)),
-                          ],
+                                  onPressed: () =>
+                                      _checkCode(_itemCodeController.text),
+                                  icon: const Icon(
+                                      Icons.subdirectory_arrow_left)),
+                            ],
+                          ),
                         ),
+                        keyboardType: TextInputType.visiblePassword,
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.allow(
+                              RegExp("[0-9a-zA-Z]")),
+                        ],
+                        onFieldSubmitted: (String? value) => _checkCode(value),
                       ),
-                      keyboardType: TextInputType.visiblePassword,
-                      inputFormatters: <TextInputFormatter>[
-                        FilteringTextInputFormatter.allow(
-                            RegExp("[0-9a-zA-Z]")),
-                      ],
-                      onFieldSubmitted: (String? value) => _checkCode(value),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Visibility(
+                  replacement: const Center(
+                    child: CircularProgressIndicator(
+                      semanticsLabel: 'fetch opname item',
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Visibility(
-                visible: _isFetchingItem,
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    semanticsLabel: 'fetch opname item',
-                  ),
-                ),
-              ),
-              Visibility(
-                visible: !_isFetchingItem,
-                child: Expanded(
-                  child: Card(
-                    shape: const BeveledRectangleBorder(
-                        side: BorderSide(width: 1, color: Colors.black)),
-                    borderOnForeground: true,
-                    child: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: ListView.separated(
-                        separatorBuilder: (context, index) => const SizedBox(
-                          height: 8,
-                        ),
-                        addAutomaticKeepAlives: false,
-                        cacheExtent: 20,
-                        itemCount: [opnameItems.length, 50].reduce(min),
-                        itemBuilder: (BuildContext context, int index) {
-                          OpnameItem opnameItem = opnameItems[index];
-                          return ListTile(
-                              shape: const RoundedRectangleBorder(
-                                  side:
-                                      BorderSide(width: 1, color: Colors.green),
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(5))),
-                              key: ObjectKey(opnameItem),
-                              title: Text("Kode Item: ${opnameItem.itemCode}"),
-                              isThreeLine: true,
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Nama Item: ${opnameItem.item?.name}"),
-                                  Text(
-                                      "Harga Jual: Rp.${opnameItem.item?.sellPrice.format()}"),
-                                  Text(
-                                      "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
-                                  Text("Rak: ${opnameItem.rackFormat}"),
-                                ],
-                              ),
-                              leading: Container(
-                                constraints: const BoxConstraints(minWidth: 50),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                  visible: !_isFetchingItem,
+                  child: SizedBox(
+                    height: cardOpnameHeight,
+                    child: Card(
+                      shape: const BeveledRectangleBorder(
+                          side: BorderSide(width: 1, color: Colors.black)),
+                      borderOnForeground: true,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: ListView.separated(
+                          separatorBuilder: (context, index) => const SizedBox(
+                            height: 8,
+                          ),
+                          addAutomaticKeepAlives: false,
+                          cacheExtent: 20,
+                          itemCount: [opnameItems.length, 50].reduce(min),
+                          itemBuilder: (BuildContext context, int index) {
+                            OpnameItem opnameItem = opnameItems[index];
+                            return ListTile(
+                                shape: const RoundedRectangleBorder(
+                                    side: BorderSide(
+                                        width: 1, color: Colors.green),
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(5))),
+                                key: ObjectKey(opnameItem),
+                                title:
+                                    Text("Kode Item: ${opnameItem.itemCode}"),
+                                isThreeLine: true,
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('QTY'),
+                                    Text("Nama Item: ${opnameItem.item?.name}"),
                                     Text(
-                                      opnameItem.quantity.format(),
-                                      style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold),
-                                    ),
+                                        "Harga Jual: Rp.${opnameItem.item?.sellPrice.format()}"),
+                                    Text(
+                                        "Tanggal: ${opnameItem.updatedAt.formatDatetime()}"),
+                                    Text("Rak: ${opnameItem.rackFormat}"),
                                   ],
                                 ),
-                              ),
-                              trailing: MenuAnchor(
-                                builder: (BuildContext context,
-                                    MenuController controller, Widget? child) {
-                                  return IconButton(
-                                    onPressed: () {
-                                      if (controller.isOpen) {
-                                        controller.close();
-                                      } else {
-                                        controller.open();
-                                      }
-                                    },
-                                    icon: const Icon(Icons.more_vert),
-                                  );
-                                },
-                                menuChildren: [
-                                  MenuItemButton(
-                                    onPressed: () {
-                                      _openInputQuantityModal(opnameItem.item!,
-                                              quantity: opnameItem.quantity,
-                                              focusNode: FocusNode())
-                                          .then((int? quantity) {
-                                        if (quantity != null) {
-                                          setState(() {
-                                            _qtyController.text = '';
-                                            _itemCodeController.text = '';
-                                            _updateOpnameItem(opnameItem,
-                                                quantity: quantity);
-                                          });
-                                        }
-                                      }).whenComplete(() {
-                                        _focusNode.requestFocus();
-                                      });
-                                    },
-                                    leadingIcon: const Icon(Icons.edit),
-                                    child: const Text('Edit'),
+                                leading: Container(
+                                  constraints:
+                                      const BoxConstraints(minWidth: 50),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text('QTY'),
+                                      Text(
+                                        opnameItem.quantity.format(),
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
                                   ),
-                                  MenuItemButton(
-                                    onPressed: () {
-                                      confirmDialog(
-                                              'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
-                                          .then((isConfirmed) {
-                                        if (isConfirmed) {
-                                          _removeItem(opnameItem);
+                                ),
+                                trailing: MenuAnchor(
+                                  builder: (BuildContext context,
+                                      MenuController controller,
+                                      Widget? child) {
+                                    return IconButton(
+                                      onPressed: () {
+                                        if (controller.isOpen) {
+                                          controller.close();
+                                        } else {
+                                          controller.open();
                                         }
-                                      });
-                                    },
-                                    leadingIcon: const Icon(Icons.close),
-                                    child: const Text('Hapus'),
-                                  ),
-                                ],
-                              ));
-                        },
+                                      },
+                                      icon: const Icon(Icons.more_vert),
+                                    );
+                                  },
+                                  menuChildren: [
+                                    MenuItemButton(
+                                      onPressed: () {
+                                        _openInputQuantityModal(
+                                                opnameItem.item!,
+                                                quantity: opnameItem.quantity,
+                                                focusNode: FocusNode())
+                                            .then((int? quantity) {
+                                          if (quantity != null) {
+                                            setState(() {
+                                              _qtyController.text = '';
+                                              _itemCodeController.text = '';
+                                              _updateOpnameItem(opnameItem,
+                                                  quantity: quantity);
+                                            });
+                                          }
+                                        }).whenComplete(() {
+                                          _focusNode.requestFocus();
+                                        });
+                                      },
+                                      leadingIcon: const Icon(Icons.edit),
+                                      child: const Text('Edit'),
+                                    ),
+                                    MenuItemButton(
+                                      onPressed: () {
+                                        confirmDialog(
+                                                'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?')
+                                            .then((isConfirmed) {
+                                          if (isConfirmed) {
+                                            _removeItem(opnameItem);
+                                          }
+                                        });
+                                      },
+                                      leadingIcon: const Icon(Icons.close),
+                                      child: const Text('Hapus'),
+                                    ),
+                                  ],
+                                ));
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
