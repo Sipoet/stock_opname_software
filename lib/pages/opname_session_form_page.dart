@@ -113,6 +113,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   }
 
   final _formState = GlobalKey<FormState>();
+  static const labelStyle = TextStyle(fontWeight: .bold, fontSize: 16);
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +163,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                         width: 300,
                         child: TextFormField(
                           decoration: const InputDecoration(
-                            label: Text('Nama/keterangan'),
+                            label: Text('Nama/keterangan', style: labelStyle),
                             border: OutlineInputBorder(),
                           ),
                           maxLength: 69,
@@ -171,7 +172,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                         ),
                       ),
                       DropdownMenu<OpnameStatus>(
-                        label: const Text('Status'),
+                        label: const Text('Status', style: labelStyle),
                         initialSelection: opnameSession.status,
                         width: 180,
                         dropdownMenuEntries: OpnameStatus.values
@@ -188,7 +189,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                         },
                       ),
                       DropdownMenu<String>(
-                        label: const Text('Lokasi'),
+                        label: const Text('Lokasi', style: labelStyle),
                         width: 180,
                         initialSelection: opnameSession.location,
                         dropdownMenuEntries: const [
@@ -202,10 +203,10 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                         },
                       ),
                       SizedBox(
-                        width: 150,
+                        width: 170,
                         child: Row(
                           children: [
-                            const Text('Auto QTY 1 :'),
+                            const Text('Auto QTY 1 :', style: labelStyle),
                             Switch(
                               value: isAutoQty,
                               onChanged: (value) => setState(() {
@@ -226,7 +227,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                         width: 180,
                         child: TextFormField(
                           decoration: const InputDecoration(
-                            label: Text('Rak'),
+                            label: Text('Rak', style: labelStyle),
                             border: OutlineInputBorder(),
                           ),
                           initialValue: rack,
@@ -256,11 +257,14 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                           focusNode: _focusNode,
                           controller: _itemCodeController,
                           forceErrorText: barcodeError,
-                          style: TextStyle(fontSize: 18),
+                          style: const TextStyle(fontSize: 18),
                           onChanged: (value) => setState(() {}),
                           decoration: InputDecoration(
                             border: const OutlineInputBorder(),
-                            label: const Text('Kode Item/barcode'),
+                            label: const Text(
+                              'Kode Item/barcode',
+                              style: labelStyle,
+                            ),
                             suffix: Wrap(
                               spacing: 20,
                               children: [
@@ -604,7 +608,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                             opnameItem?.rack = value.split(',').toSet(),
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
-                          label: Text('Rak'),
+                          label: Text('Rak', style: labelStyle),
                         ),
                       ),
                     ),
@@ -619,7 +623,7 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
-                      label: Text('Jumlah'),
+                      label: Text('Jumlah', style: labelStyle),
                     ),
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
