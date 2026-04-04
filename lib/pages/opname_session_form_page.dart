@@ -39,11 +39,11 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   final _itemCodeController = TextEditingController();
   late final Database db;
   bool _isFetchingItem = false;
-  bool opnameSessionChanged = false;
   bool isAutoQty = false;
   int safetyNetQTY = 50;
   String rack = '';
   String? barcodeError;
+  String? locationError;
   @override
   void initState() {
     db = context.read<Database>();
@@ -113,7 +113,22 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   }
 
   final _formState = GlobalKey<FormState>();
+  final _opnameSessionFormState = GlobalKey<FormState>();
   static const labelStyle = TextStyle(fontWeight: .bold, fontSize: 16);
+
+  Future<bool> hasOpenSession(String location) async {
+    final orm = Orm(
+      tableName: OpnameSession.tableName,
+      pkField: OpnameSession.pkField,
+      db: db,
+    );
+    final sameOpnameSession = await orm.findBy({
+      'location': location,
+      'status': OpnameStatus.open.toString(),
+    }, OpnameSession.convert);
+    return sameOpnameSession != null &&
+        opnameSession.id != sameOpnameSession.id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,18 +159,21 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
           icon: const Icon(Icons.arrow_back),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10.0),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Form(
-              autovalidateMode: .always,
-              key: _formState,
-              child: Column(
-                mainAxisSize: .min,
-                crossAxisAlignment: .start,
-                children: [
-                  Wrap(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(10.0),
+          child: Center(
+            child: Column(
+              mainAxisSize: .min,
+              crossAxisAlignment: .start,
+              mainAxisAlignment: .start,
+              children: [
+                const Text('Sesi Opname', style: labelStyle),
+                const SizedBox(height: 10),
+                Form(
+                  key: _opnameSessionFormState,
+                  autovalidateMode: .always,
+                  child: Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
@@ -167,8 +185,47 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                             border: OutlineInputBorder(),
                           ),
                           maxLength: 69,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'harus diisi';
+                            }
+                            return null;
+                          },
                           initialValue: opnameSession.name,
-                          onChanged: (value) => opnameSession.name = value,
+                          onSaved: (value) {
+                            opnameSession.name = value ?? '';
+                            debugPrint('name change');
+                          },
+                        ),
+                      ),
+                      FormField<String>(
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'harus dipilih';
+                          }
+                          return null;
+                        },
+                        onSaved: (newValue) {
+                          opnameSession.location =
+                              newValue ?? opnameSession.location;
+                        },
+                        initialValue: opnameSession.location,
+                        builder: (state) => DropdownMenu<String?>(
+                          label: const Text('Lokasi', style: labelStyle),
+                          width: 250,
+                          initialSelection: opnameSession.location,
+                          dropdownMenuEntries: const [
+                            // DropdownMenuEntry(value: null, label: ''),
+                            DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
+                            DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
+                          ],
+                          errorText: state.errorText ?? locationError,
+                          onSelected: (value) {
+                            setState(() {
+                              locationError = null;
+                            });
+                            state.didChange(value);
+                          },
                         ),
                       ),
                       DropdownMenu<OpnameStatus>(
@@ -185,261 +242,276 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
                             .toList(),
                         onSelected: (value) {
                           opnameSession.status = value ?? opnameSession.status;
-                          opnameSessionChanged = true;
                         },
-                      ),
-                      DropdownMenu<String>(
-                        label: const Text('Lokasi', style: labelStyle),
-                        width: 180,
-                        initialSelection: opnameSession.location,
-                        dropdownMenuEntries: const [
-                          DropdownMenuEntry(value: 'TOKO', label: 'Toko'),
-                          DropdownMenuEntry(value: 'GDG', label: 'Gudang'),
-                        ],
-                        onSelected: (value) {
-                          opnameSession.location =
-                              value ?? opnameSession.location;
-                          opnameSessionChanged = true;
-                        },
-                      ),
-                      SizedBox(
-                        width: 170,
-                        child: Row(
-                          children: [
-                            const Text('Auto QTY 1 :', style: labelStyle),
-                            Switch(
-                              value: isAutoQty,
-                              onChanged: (value) => setState(() {
-                                isAutoQty = value;
-                              }),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Wrap(
-                    runSpacing: 10,
-                    spacing: 15,
-                    children: [
-                      SizedBox(
-                        width: 180,
-                        child: TextFormField(
-                          decoration: const InputDecoration(
-                            label: Text('Rak', style: labelStyle),
-                            border: OutlineInputBorder(),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_opnameSessionFormState.currentState?.validate() !=
+                        true) {
+                      return;
+                    }
+                    _opnameSessionFormState.currentState?.save();
+                    if (await hasOpenSession(opnameSession.location)) {
+                      setState(() {
+                        locationError = 'sudah ada sesi yang aktif';
+                      });
+
+                      return;
+                    }
+                    await saveOpnameSession();
+                  },
+                  child: const Text('Simpan'),
+                ),
+                const SizedBox(height: 5),
+                const Divider(),
+                const SizedBox(height: 20),
+                Visibility(
+                  visible: !opnameSession.isNewRecord,
+                  child: Form(
+                    key: _formState,
+                    autovalidateMode: .always,
+                    child: Wrap(
+                      runSpacing: 10,
+                      spacing: 15,
+                      children: [
+                        SizedBox(
+                          width: 170,
+                          child: Row(
+                            children: [
+                              const Text('Auto QTY 1 :', style: labelStyle),
+                              Switch(
+                                value: isAutoQty,
+                                onChanged: (value) => setState(() {
+                                  isAutoQty = value;
+                                }),
+                              ),
+                            ],
                           ),
-                          initialValue: rack,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'harus diisi';
-                            }
-                            return null;
-                          },
-                          onChanged: (value) => rack = value,
                         ),
-                      ),
-                      Offstage(
-                        offstage: !isNativeMobileDevice(),
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ElevatedButton.icon(
-                            onPressed: _scanBarcode,
-                            icon: const Icon(Icons.camera_alt),
-                            label: const Text('Scan'),
+                        SizedBox(
+                          width: 180,
+                          child: TextFormField(
+                            decoration: const InputDecoration(
+                              label: Text('Rak', style: labelStyle),
+                              border: OutlineInputBorder(),
+                            ),
+                            initialValue: rack,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'harus diisi';
+                              }
+                              return null;
+                            },
+                            onChanged: (value) => rack = value,
                           ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: TextFormField(
-                          focusNode: _focusNode,
-                          controller: _itemCodeController,
-                          forceErrorText: barcodeError,
-                          style: const TextStyle(fontSize: 18),
-                          onChanged: (value) => setState(() {}),
-                          decoration: InputDecoration(
-                            border: const OutlineInputBorder(),
-                            label: const Text(
-                              'Kode Item/barcode',
-                              style: labelStyle,
-                            ),
-                            suffix: Wrap(
-                              spacing: 20,
-                              children: [
-                                if (_itemCodeController.text.isNotEmpty)
-                                  IconButton(
-                                    splashRadius: 10,
-                                    onPressed: _itemCodeController.clear,
-                                    icon: const Icon(Icons.clear),
-                                  ),
-                                IconButton(
-                                  splashRadius: 10,
-                                  onPressed: () =>
-                                      _checkCode(_itemCodeController.text),
-                                  icon: const Icon(
-                                    Icons.subdirectory_arrow_left,
-                                  ),
-                                ),
-                              ],
+                        Offstage(
+                          offstage: !isNativeMobileDevice(),
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: ElevatedButton.icon(
+                              onPressed: _scanBarcode,
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Scan'),
                             ),
                           ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.allow(
-                              RegExp("[0-9a-zA-Z]"),
-                            ),
-                          ],
-                          onFieldSubmitted: (String? value) =>
-                              _checkCode(value),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Visibility(
-                    replacement: const Center(
-                      child: CircularProgressIndicator(
-                        semanticsLabel: 'fetch opname item',
-                      ),
-                    ),
-                    visible: !_isFetchingItem,
-                    child: SizedBox(
-                      height: cardOpnameHeight,
-                      child: Card(
-                        shape: const BeveledRectangleBorder(
-                          side: BorderSide(width: 1, color: Colors.black),
-                        ),
-                        borderOnForeground: true,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: ListView.separated(
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 8),
-                            addAutomaticKeepAlives: false,
-                            cacheExtent: 20,
-                            itemCount: [opnameItems.length, 50].reduce(min),
-                            itemBuilder: (BuildContext context, int index) {
-                              OpnameItem opnameItem = opnameItems[index];
-                              return ListTile(
-                                shape: const RoundedRectangleBorder(
-                                  side: BorderSide(
-                                    width: 1,
-                                    color: Colors.green,
-                                  ),
-                                  borderRadius: BorderRadius.all(
-                                    Radius.circular(5),
-                                  ),
-                                ),
-                                key: ObjectKey(opnameItem),
-                                title: Text(
-                                  "Kode Item: ${opnameItem.itemCode}",
-                                ),
-                                isThreeLine: true,
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text("Nama Item: ${opnameItem.item?.name}"),
-                                    Text(
-                                      "Harga Jual: Rp.${opnameItem.item?.sellPrice.format()}",
-                                    ),
-                                    Text(
-                                      "Tanggal: ${opnameItem.updatedAt.formatDatetime()}",
-                                    ),
-                                    Text("Rak: ${opnameItem.rackFormat}"),
-                                  ],
-                                ),
-                                leading: Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 50,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text('QTY'),
-                                      Text(
-                                        opnameItem.quantity.format(),
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                trailing: MenuAnchor(
-                                  builder:
-                                      (
-                                        BuildContext context,
-                                        MenuController controller,
-                                        Widget? child,
-                                      ) {
-                                        return IconButton(
-                                          onPressed: () {
-                                            if (controller.isOpen) {
-                                              controller.close();
-                                            } else {
-                                              controller.open();
-                                            }
-                                          },
-                                          icon: const Icon(Icons.more_vert),
-                                        );
-                                      },
-                                  menuChildren: [
-                                    MenuItemButton(
+                        SizedBox(
+                          width: 300,
+                          child: TextFormField(
+                            focusNode: _focusNode,
+                            controller: _itemCodeController,
+                            forceErrorText: barcodeError,
+                            style: const TextStyle(fontSize: 18),
+                            onChanged: (value) => setState(() {
+                              barcodeError = null;
+                            }),
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              label: const Text(
+                                'Kode Item/barcode',
+                                style: labelStyle,
+                              ),
+                              suffix: Wrap(
+                                spacing: 20,
+                                children: [
+                                  if (_itemCodeController.text.isNotEmpty)
+                                    IconButton(
+                                      splashRadius: 10,
                                       onPressed: () {
-                                        _openInputQuantityModal(
-                                              opnameItem.item!,
-                                              quantity: opnameItem.quantity,
-                                              focusNode: FocusNode(),
-                                              opnameItem: opnameItem,
-                                            )
-                                            .then((int? quantity) {
-                                              if (quantity != null) {
-                                                setState(() {
-                                                  _qtyController.text = '';
-                                                  _itemCodeController.text = '';
-                                                  _updateOpnameItem(
-                                                    opnameItem,
-                                                    quantity: quantity,
-                                                    addRackFromInput: false,
-                                                  );
-                                                });
-                                              }
-                                            })
-                                            .whenComplete(() {
-                                              _focusNode.requestFocus();
-                                            });
-                                      },
-                                      leadingIcon: const Icon(Icons.edit),
-                                      child: const Text('Edit'),
-                                    ),
-                                    MenuItemButton(
-                                      onPressed: () {
-                                        confirmDialog(
-                                          'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?',
-                                        ).then((isConfirmed) {
-                                          if (isConfirmed) {
-                                            _removeItem(opnameItem);
-                                          }
+                                        _itemCodeController.clear();
+                                        setState(() {
+                                          barcodeError = null;
                                         });
                                       },
-                                      leadingIcon: const Icon(Icons.close),
-                                      child: const Text('Hapus'),
+                                      icon: const Icon(Icons.clear),
+                                    ),
+                                  IconButton(
+                                    splashRadius: 10,
+                                    onPressed: () =>
+                                        _checkCode(_itemCodeController.text),
+                                    icon: const Icon(
+                                      Icons.subdirectory_arrow_left,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.allow(
+                                RegExp("[0-9a-zA-Z]"),
+                              ),
+                            ],
+                            onFieldSubmitted: (String? value) =>
+                                _checkCode(value),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Visibility(
+                  visible: _isFetchingItem,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      semanticsLabel: 'fetch opname item',
+                    ),
+                  ),
+                ),
+                Visibility(
+                  visible: !_isFetchingItem && !opnameSession.isNewRecord,
+                  child: SizedBox(
+                    height: cardOpnameHeight,
+                    child: Card(
+                      shape: const BeveledRectangleBorder(
+                        side: BorderSide(width: 1, color: Colors.black),
+                      ),
+                      borderOnForeground: true,
+                      child: Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: ListView.separated(
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 8),
+                          addAutomaticKeepAlives: false,
+                          cacheExtent: 20,
+                          itemCount: [opnameItems.length, 50].reduce(min),
+                          itemBuilder: (BuildContext context, int index) {
+                            OpnameItem opnameItem = opnameItems[index];
+                            return ListTile(
+                              shape: const RoundedRectangleBorder(
+                                side: BorderSide(width: 1, color: Colors.green),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(5),
+                                ),
+                              ),
+                              key: ObjectKey(opnameItem),
+                              title: Text("Kode Item: ${opnameItem.itemCode}"),
+                              isThreeLine: true,
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Nama Item: ${opnameItem.item?.name}"),
+                                  Text(
+                                    "Harga Jual: Rp.${opnameItem.item?.sellPrice.format()}",
+                                  ),
+                                  Text(
+                                    "Tanggal: ${opnameItem.updatedAt.formatDatetime()}",
+                                  ),
+                                  Text("Rak: ${opnameItem.rackFormat}"),
+                                ],
+                              ),
+                              leading: Container(
+                                constraints: const BoxConstraints(minWidth: 50),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('QTY'),
+                                    Text(
+                                      opnameItem.quantity.format(),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                              trailing: MenuAnchor(
+                                builder:
+                                    (
+                                      BuildContext context,
+                                      MenuController controller,
+                                      Widget? child,
+                                    ) {
+                                      return IconButton(
+                                        onPressed: () {
+                                          if (controller.isOpen) {
+                                            controller.close();
+                                          } else {
+                                            controller.open();
+                                          }
+                                        },
+                                        icon: const Icon(Icons.more_vert),
+                                      );
+                                    },
+                                menuChildren: [
+                                  MenuItemButton(
+                                    onPressed: () {
+                                      _openInputQuantityModal(
+                                            opnameItem.item!,
+                                            quantity: opnameItem.quantity,
+                                            focusNode: FocusNode(),
+                                            opnameItem: opnameItem,
+                                          )
+                                          .then((int? quantity) {
+                                            if (quantity != null) {
+                                              setState(() {
+                                                _qtyController.text = '';
+                                                _itemCodeController.text = '';
+                                                _updateOpnameItem(
+                                                  opnameItem,
+                                                  quantity: quantity,
+                                                  addRackFromInput: false,
+                                                );
+                                              });
+                                            }
+                                          })
+                                          .whenComplete(() {
+                                            _focusNode.requestFocus();
+                                          });
+                                    },
+                                    leadingIcon: const Icon(Icons.edit),
+                                    child: const Text('Edit'),
+                                  ),
+                                  MenuItemButton(
+                                    onPressed: () {
+                                      confirmDialog(
+                                        'Apakah anda yakin ingin menghapus item ${opnameItem.itemCode} ?',
+                                      ).then((isConfirmed) {
+                                        if (isConfirmed) {
+                                          _removeItem(opnameItem);
+                                        }
+                                      });
+                                    },
+                                    leadingIcon: const Icon(Icons.close),
+                                    child: const Text('Hapus'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -688,10 +760,6 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
   }
 
   void _updateOpname(Item item, int quantity) async {
-    if (opnameSession.id == null || opnameSessionChanged) {
-      await createOpnameSession();
-      opnameSessionChanged = false;
-    }
     OpnameItem? opnameItem = findOpnameItem(item.code);
     if (opnameItem == null) {
       _insertOpnameItem(item, quantity);
@@ -700,13 +768,16 @@ class _OpnameSessionFormPageState extends State<OpnameSessionFormPage>
     }
   }
 
-  Future<OpnameSession> createOpnameSession() async {
+  Future<OpnameSession> saveOpnameSession() async {
     final orm = Orm(
       tableName: OpnameSession.tableName,
       pkField: OpnameSession.pkField,
       db: db,
     );
-    opnameSession.id = await orm.save(opnameSession);
+    await orm.save(opnameSession);
+    setState(() {
+      opnameSession;
+    });
     return opnameSession;
   }
 

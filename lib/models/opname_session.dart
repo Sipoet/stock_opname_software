@@ -38,13 +38,13 @@ class OpnameSession extends ApplicationRecord {
   List<OpnameItem> items;
   OpnameSession({
     DateTime? updatedAt,
-    this.location = 'TOKO',
+    this.location = '',
     this.status = OpnameStatus.open,
     super.id,
     this.name = '',
     items,
-  })  : items = items ?? <OpnameItem>[],
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : items = items ?? <OpnameItem>[],
+       updatedAt = updatedAt ?? DateTime.now();
 
   factory OpnameSession.convert(Map json) {
     return OpnameSession(

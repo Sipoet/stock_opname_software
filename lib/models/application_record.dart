@@ -27,6 +27,8 @@ abstract class ApplicationRecord {
 
   // static convert(Map json);
   Map<String, Object?> toJson();
+
+  bool get isNewRecord => pkValue == null;
 }
 
 class Orm {
@@ -36,14 +38,21 @@ class Orm {
   Orm({required this.tableName, required this.pkField, required this.db});
 
   Future<T?> find<T extends ApplicationRecord>(
-      String id, T Function(Map<String, Object?>) convert) async {
-    final result =
-        await db.query(tableName, where: '$pkField = ?', whereArgs: [id]);
+    String id,
+    T Function(Map<String, Object?>) convert,
+  ) async {
+    final result = await db.query(
+      tableName,
+      where: '$pkField = ?',
+      whereArgs: [id],
+    );
     return result.map<T>((row) => convert(row)).toList().firstOrNull;
   }
 
-  Future<T?> findBy<T extends ApplicationRecord>(Map<String, Object?> filter,
-      T Function(Map<String, Object?>) convert) async {
+  Future<T?> findBy<T extends ApplicationRecord>(
+    Map<String, Object?> filter,
+    T Function(Map<String, Object?>) convert,
+  ) async {
     List<String> query = [];
     List<Object?> values = [];
     filter.forEach((key, value) {
@@ -59,13 +68,14 @@ class Orm {
     return result.map<T>((row) => convert(row)).toList().firstOrNull;
   }
 
-  Future<List<T>> finds<T extends ApplicationRecord>(
-      {Map<String, Object?>? filter,
-      int? page,
-      int? limit,
-      String? orderBy,
-      QueryOrder orderValue = QueryOrder.asc,
-      required T Function(Map<String, Object?>) convert}) async {
+  Future<List<T>> finds<T extends ApplicationRecord>({
+    Map<String, Object?>? filter,
+    int? page,
+    int? limit,
+    String? orderBy,
+    QueryOrder orderValue = QueryOrder.asc,
+    required T Function(Map<String, Object?>) convert,
+  }) async {
     List<String>? query;
     List? values;
     if (filter != null) {
@@ -80,12 +90,14 @@ class Orm {
     if (page != null) {
       offset = (page - 1) * (limit ?? 10);
     }
-    final result = await db.query(tableName,
-        where: query?.join(' AND '),
-        whereArgs: values,
-        offset: offset,
-        orderBy: "$orderBy ${orderValue.toString()}",
-        limit: limit);
+    final result = await db.query(
+      tableName,
+      where: query?.join(' AND '),
+      whereArgs: values,
+      offset: offset,
+      orderBy: "$orderBy ${orderValue.toString()}",
+      limit: limit,
+    );
     return result.map<T>((row) => convert(row)).toList();
   }
 
@@ -102,22 +114,28 @@ class Orm {
     for (ApplicationRecord model in models) {
       final data = model.toJson();
       if (model.pkValue == null) {
-        batch.insert(tableName, data,
-            conflictAlgorithm: ConflictAlgorithm.rollback);
+        batch.insert(
+          tableName,
+          data,
+          conflictAlgorithm: ConflictAlgorithm.rollback,
+        );
       } else {
-        batch.update(tableName, data,
-            where: '$pkField = ?',
-            whereArgs: [data[pkField]],
-            conflictAlgorithm: ConflictAlgorithm.rollback);
+        batch.update(
+          tableName,
+          data,
+          where: '$pkField = ?',
+          whereArgs: [data[pkField]],
+          conflictAlgorithm: ConflictAlgorithm.rollback,
+        );
       }
     }
-    return batch.commit(
-      continueOnError: true,
-    );
+    return batch.commit(continueOnError: true);
   }
 
-  Future<int> _create(ApplicationRecord model,
-      {Transaction? transaction}) async {
+  Future<int> _create(
+    ApplicationRecord model, {
+    Transaction? transaction,
+  }) async {
     final data = model.toJson();
     if (model.pkValue != null) {
       model.pkValue == null;
@@ -135,44 +153,67 @@ class Orm {
     return model.pkValue;
   }
 
-  Future<int> _update(ApplicationRecord model,
-      {Transaction? transaction}) async {
+  Future<int> _update(
+    ApplicationRecord model, {
+    Transaction? transaction,
+  }) async {
     final data = model.toJson();
     if (transaction == null) {
-      return await db.update(tableName, data,
-          where: '$pkField = ?', whereArgs: [model.pkValue]);
+      return await db.update(
+        tableName,
+        data,
+        where: '$pkField = ?',
+        whereArgs: [model.pkValue],
+      );
     }
-    return await transaction.update(tableName, data,
-        where: '$pkField = ?', whereArgs: [model.pkValue]);
+    return await transaction.update(
+      tableName,
+      data,
+      where: '$pkField = ?',
+      whereArgs: [model.pkValue],
+    );
   }
 
-  Future<Object?> maxOf(String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> maxOf(
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     return reduce('MAX', keyname, filter: filter);
   }
 
-  Future<Object?> countOf(String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> countOf(
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     return reduce('COUNT', keyname, filter: filter);
   }
 
-  Future<Object?> minOf(String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> minOf(
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     return reduce('MIN', keyname, filter: filter);
   }
 
-  Future<Object?> sumOf(String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> sumOf(
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     return reduce('SUM', keyname, filter: filter);
   }
 
-  Future<Object?> avgOf(String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> avgOf(
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     return reduce('AVG', keyname, filter: filter);
   }
 
-  Future<Object?> reduce(String operator, String keyname,
-      {Map<String, String> filter = const {}}) async {
+  Future<Object?> reduce(
+    String operator,
+    String keyname, {
+    Map<String, String> filter = const {},
+  }) async {
     String name = '$operator($keyname)';
     String query = "SELECT $name from $tableName";
     List filterQuery = [];

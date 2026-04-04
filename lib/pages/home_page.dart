@@ -35,38 +35,45 @@ class _HomePageState extends State<HomePage>
   void initState() {
     db = context.read<Database>();
     final orm = Orm(
-        tableName: SystemSetting.tableName,
-        pkField: SystemSetting.pkField,
-        db: db);
-    orm.findBy<SystemSetting>({'keyname': 'host'}, SystemSetting.convert).then(
-        (systemSetting) {
+      tableName: SystemSetting.tableName,
+      pkField: SystemSetting.pkField,
+      db: db,
+    );
+    orm.findBy<SystemSetting>({'keyname': 'host'}, SystemSetting.convert).then((
+      systemSetting,
+    ) {
       setState(() {
         host = systemSetting?.valueStr ?? '';
       });
     });
-    orm.findBy<SystemSetting>(
-        {'keyname': 'username'}, SystemSetting.convert).then((systemSetting) {
-      setState(() {
-        username = systemSetting?.valueStr ?? '';
-      });
-    });
+    orm
+        .findBy<SystemSetting>({'keyname': 'username'}, SystemSetting.convert)
+        .then((systemSetting) {
+          setState(() {
+            username = systemSetting?.valueStr ?? '';
+          });
+        });
     fetchOpnameSession();
     super.initState();
   }
 
   void fetchOpnameSession() {
     final orm = Orm(
-        tableName: OpnameSession.tableName,
-        pkField: OpnameSession.pkField,
-        db: db);
+      tableName: OpnameSession.tableName,
+      pkField: OpnameSession.pkField,
+      db: db,
+    );
     orm
         .finds<OpnameSession>(
-            orderBy: 'updated_at',
-            orderValue: QueryOrder.desc,
-            convert: OpnameSession.convert)
-        .then((data) => setState(() {
-              opnameSessions = data;
-            }));
+          orderBy: 'updated_at',
+          orderValue: QueryOrder.desc,
+          convert: OpnameSession.convert,
+        )
+        .then(
+          (data) => setState(() {
+            opnameSessions = data;
+          }),
+        );
   }
 
   @override
@@ -78,13 +85,15 @@ class _HomePageState extends State<HomePage>
         title: const Text('Stock Opname Session Generator'),
         actions: [
           IconButton(
-              onPressed: fetchOpnameSession,
-              tooltip: 'Refresh Opname',
-              icon: const Icon(Icons.refresh)),
+            onPressed: fetchOpnameSession,
+            tooltip: 'Refresh Opname',
+            icon: const Icon(Icons.refresh),
+          ),
           IconButton(
-              onPressed: openItemDownloadDialog,
-              tooltip: 'Download Item Data',
-              icon: const Icon(Icons.download))
+            onPressed: openItemDownloadDialog,
+            tooltip: 'Download Item Data',
+            icon: const Icon(Icons.download),
+          ),
         ],
         leading: const DrawerButton(),
       ),
@@ -105,9 +114,10 @@ class _HomePageState extends State<HomePage>
     password = '';
     final colorScheme = Theme.of(context).colorScheme;
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return StatefulBuilder(builder: (context, setStateDialog) {
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
             final navigator = Navigator.of(context);
             return AlertDialog(
               title: const Text('Download Item Data Form'),
@@ -121,9 +131,7 @@ class _HomePageState extends State<HomePage>
                     initialValue: host,
                     onChanged: (value) => host = value,
                   ),
-                  const SizedBox(
-                    height: 10,
-                  ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     decoration: const InputDecoration(
                       label: Text('Username'),
@@ -132,9 +140,7 @@ class _HomePageState extends State<HomePage>
                     initialValue: username,
                     onChanged: (value) => username = value,
                   ),
-                  const SizedBox(
-                    height: 10,
-                  ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     decoration: const InputDecoration(
                       label: Text('Password'),
@@ -148,18 +154,19 @@ class _HomePageState extends State<HomePage>
                       setStateDialog(() {
                         _isDownloading = true;
                       });
-                      downloadAndSaveItems(setStateDialog).then((isSuccess) {
-                        if (isSuccess) navigator.pop();
-                      }).whenComplete(
-                          () => setStateDialog(() => _isDownloading = false));
+                      downloadAndSaveItems(setStateDialog)
+                          .then((isSuccess) {
+                            if (isSuccess) navigator.pop();
+                          })
+                          .whenComplete(
+                            () => setStateDialog(() => _isDownloading = false),
+                          );
                     },
                     obscureText: true,
                     initialValue: password,
                     onChanged: (value) => password = value,
                   ),
-                  const SizedBox(
-                    height: 10,
-                  ),
+                  const SizedBox(height: 10),
                   CheckboxListTile.adaptive(
                     value: _isResetItem,
                     onChanged: (value) {
@@ -169,9 +176,7 @@ class _HomePageState extends State<HomePage>
                     },
                     title: const Text('Unduh semua item'),
                   ),
-                  const SizedBox(
-                    height: 10,
-                  ),
+                  const SizedBox(height: 10),
                   Visibility(
                     visible: _isDownloading,
                     child: Padding(
@@ -183,58 +188,72 @@ class _HomePageState extends State<HomePage>
                     ),
                   ),
                   Visibility(
-                      visible: currentLength != -1,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Text(currentLength == 0
+                    visible: currentLength != -1,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(
+                        currentLength == 0
                             ? "Download Data"
-                            : "progress: $currentLength / $totalLength"),
-                      )),
+                            : "progress: $currentLength / $totalLength",
+                      ),
+                    ),
+                  ),
                 ],
               ),
               actions: [
                 ElevatedButton(
-                    onPressed: _isDownloading
-                        ? null
-                        : () {
-                            setStateDialog(() {
-                              _isDownloading = true;
-                            });
-                            downloadAndSaveItems(setStateDialog).then(
-                                (isSuccess) {
-                              if (isSuccess) navigator.pop();
-                            }).whenComplete(() =>
-                                setStateDialog(() => _isDownloading = false));
-                          },
-                    child: const Text('Download')),
+                  onPressed: _isDownloading
+                      ? null
+                      : () {
+                          setStateDialog(() {
+                            _isDownloading = true;
+                          });
+                          downloadAndSaveItems(setStateDialog)
+                              .then((isSuccess) {
+                                if (isSuccess) navigator.pop();
+                              })
+                              .whenComplete(
+                                () => setStateDialog(
+                                  () => _isDownloading = false,
+                                ),
+                              );
+                        },
+                  child: const Text('Download'),
+                ),
                 ElevatedButton(
-                    onPressed: () {
-                      navigator.pop();
-                    },
-                    style: const ButtonStyle(
-                        backgroundColor:
-                            WidgetStatePropertyAll<Color>(Colors.grey)),
-                    child: const Text('cancel')),
+                  onPressed: () {
+                    navigator.pop();
+                  },
+                  style: const ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll<Color>(Colors.grey),
+                  ),
+                  child: const Text('cancel'),
+                ),
               ],
             );
-          });
-        });
+          },
+        );
+      },
+    );
   }
 
   Future<String?> login(username, password) async {
     var url = Uri.https(host, 'api/login');
     try {
-      var response = await dio.post(url.toString(),
-          data: {
-            'user': {'username': username, 'password': password}
-          },
-          options: Options(responseType: ResponseType.json));
+      var response = await dio.post(
+        url.toString(),
+        data: {
+          'user': {'username': username, 'password': password},
+        },
+        options: Options(responseType: ResponseType.json),
+      );
       if (response.statusCode != 200) {
         toastification.show(
           type: ToastificationType.error,
           title: const Text('Gagal Download Item'),
-          description:
-              Text(response.data['message'] ?? 'Username/password salah'),
+          description: Text(
+            response.data['message'] ?? 'Username/password salah',
+          ),
           autoCloseDuration: const Duration(seconds: 5),
         );
         return null;
@@ -248,16 +267,21 @@ class _HomePageState extends State<HomePage>
 
   void saveHosts() async {
     final orm = Orm(
-        tableName: SystemSetting.tableName,
-        pkField: SystemSetting.pkField,
-        db: db);
-    SystemSetting setting = await orm.findBy<SystemSetting>(
-            {'keyname': 'host'}, SystemSetting.convert) ??
+      tableName: SystemSetting.tableName,
+      pkField: SystemSetting.pkField,
+      db: db,
+    );
+    SystemSetting setting =
+        await orm.findBy<SystemSetting>({
+          'keyname': 'host',
+        }, SystemSetting.convert) ??
         SystemSetting(keyname: 'host');
     setting.valueStr = host;
     orm.save(setting);
-    setting = await orm.findBy<SystemSetting>(
-            {'keyname': 'username'}, SystemSetting.convert) ??
+    setting =
+        await orm.findBy<SystemSetting>({
+          'keyname': 'username',
+        }, SystemSetting.convert) ??
         SystemSetting(keyname: 'username');
     setting.valueStr = username;
     orm.save(setting);
@@ -269,7 +293,8 @@ class _HomePageState extends State<HomePage>
   bool _isResetItem = false;
 
   Future<bool> downloadAndSaveItems(
-      void Function(void Function()) setStateDialog) async {
+    void Function(void Function()) setStateDialog,
+  ) async {
     (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
       final client = HttpClient();
       client.badCertificateCallback = (cert, host, port) => true;
@@ -327,7 +352,8 @@ class _HomePageState extends State<HomePage>
       });
       return result;
     } on DioException catch (e) {
-      String message = e.response?.data.toString() ??
+      String message =
+          e.response?.data.toString() ??
           'tidak bisa ambil data item, kontak technical support';
       toastification.show(
         type: ToastificationType.error,
@@ -347,19 +373,22 @@ class _HomePageState extends State<HomePage>
     var orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
 
     var lastUpdated = _isResetItem ? null : await orm.maxOf('updated_at');
-    var url = Uri.https(
-        host, 'api/ipos/items/download', {'last_updated_at': lastUpdated});
+    var url = Uri.https(host, 'api/ipos/items/download', {
+      'last_updated_at': lastUpdated,
+    });
 
-    var response = await dio.getUri(url,
-        options: Options(
-          receiveTimeout: const Duration(minutes: 20),
-          headers: {
-            'Authorization': token,
-            'X-TEST': 'test-header',
-            Headers.acceptHeader: 'application/json',
-            Headers.contentTypeHeader: 'application/json',
-          },
-        ));
+    var response = await dio.getUri(
+      url,
+      options: Options(
+        receiveTimeout: const Duration(minutes: 20),
+        headers: {
+          'Authorization': token,
+          'X-TEST': 'test-header',
+          Headers.acceptHeader: 'application/json',
+          Headers.contentTypeHeader: 'application/json',
+        },
+      ),
+    );
     List data = response.data['data'];
     if (data.isEmpty) {
       return [];
@@ -368,18 +397,22 @@ class _HomePageState extends State<HomePage>
     List<Item> items = [];
     for (final row in data) {
       final attributes = row['attributes'];
-      String barcode =
-          (attributes['barcode'] ?? attributes['code']).toString().trim();
+      String barcode = (attributes['barcode'] ?? attributes['code'])
+          .toString()
+          .trim();
       if (barcode.isEmpty) {
         debugPrint('barcode ${attributes.toString()} not found');
       }
-      Item item = await orm.findBy<Item>({'barcode': barcode}, Item.convert) ??
+      Item item =
+          await orm.findBy<Item>({'barcode': barcode}, Item.convert) ??
           Item(barcode: barcode);
       item.code = attributes['code'].toString().trim();
       item.name = attributes['name'].toString().trim();
-      item.sellPrice = double.tryParse(attributes['sell_price'].toString()) ??
+      item.sellPrice =
+          double.tryParse(attributes['sell_price'].toString()) ??
           item.sellPrice;
-      item.updatedAt = DateTime.tryParse(attributes['updated_at'].toString()) ??
+      item.updatedAt =
+          DateTime.tryParse(attributes['updated_at'].toString()) ??
           item.updatedAt;
       items.add(item);
     }
@@ -387,7 +420,9 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<bool> saveItems(
-      List<Item> items, void Function(void Function()) setStateDialog) async {
+    List<Item> items,
+    void Function(void Function()) setStateDialog,
+  ) async {
     final orm = Orm(tableName: Item.tableName, pkField: Item.pkField, db: db);
 
     if (items.isEmpty) {
@@ -405,8 +440,9 @@ class _HomePageState extends State<HomePage>
       bool result = false;
       do {
         List<Object?> massIds = await orm.massSave(batchItems);
-        result = !massIds
-            .any((result) => (int.tryParse(result.toString()) ?? 0) == 0);
+        result = !massIds.any(
+          (result) => (int.tryParse(result.toString()) ?? 0) == 0,
+        );
         trying += 1;
       } while (result && trying > 4);
       setStateDialog(() {
@@ -415,8 +451,9 @@ class _HomePageState extends State<HomePage>
     }
 
     for (Item item in items) {
-      final localItem =
-          await orm.findBy<Item>({'barcode': item.barcode}, Item.convert);
+      final localItem = await orm.findBy<Item>({
+        'barcode': item.barcode,
+      }, Item.convert);
       if (localItem == null) {
         final tResult = await orm.save(item);
         if (tResult == 0) {
@@ -434,9 +471,7 @@ class _HomePageState extends State<HomePage>
           MaterialPageRoute(
             builder: (context) => Provider<Database>.value(
               value: db,
-              child: OpnameSessionFormPage(
-                opnameSession: OpnameSession(),
-              ),
+              child: OpnameSessionFormPage(opnameSession: OpnameSession()),
             ),
           ),
         )
@@ -447,27 +482,39 @@ class _HomePageState extends State<HomePage>
     return Container(
       constraints: const BoxConstraints(maxWidth: 500),
       child: ListView(
-          children: opnameSessions
-              .map<ListTile>((opnameSession) => ListTile(
-                    title: Text(
-                      "Lokasi : ${opnameSession.location}",
+        children: opnameSessions
+            .map<ListTile>(
+              (opnameSession) => ListTile(
+                title: Text(opnameSession.name),
+                subtitle: Column(
+                  crossAxisAlignment: .start,
+                  children: [
+                    Text("Lokasi : ${opnameSession.location}"),
+                    Text(
+                      "Status ${opnameSession.status.toString()}, Tanggal: ${opnameSession.updatedAt.formatDatetime()}",
                     ),
-                    subtitle: Text(
-                        "Status ${opnameSession.status.toString()}, Tanggal: ${opnameSession.updatedAt.formatDatetime()}"),
-                    leading: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        const Text('ID',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text(
-                          opnameSession.id.toString(),
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ],
+                  ],
+                ),
+                leading: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    const Text(
+                      'ID',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    trailing: MenuAnchor(
-                      builder: (BuildContext context, MenuController controller,
-                          Widget? child) {
+                    Text(
+                      opnameSession.id.toString(),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
+                trailing: MenuAnchor(
+                  builder:
+                      (
+                        BuildContext context,
+                        MenuController controller,
+                        Widget? child,
+                      ) {
                         return IconButton(
                           onPressed: () {
                             if (controller.isOpen) {
@@ -480,119 +527,134 @@ class _HomePageState extends State<HomePage>
                           tooltip: 'Show menu',
                         );
                       },
-                      menuChildren: [
-                        MenuItemButton(
-                          onPressed: () async {
-                            final orm = Orm(
-                                tableName: OpnameItem.tableName,
-                                pkField: OpnameItem.pkField,
-                                db: db);
-                            opnameSession.items = await orm.finds<OpnameItem>(
-                                filter: {'opname_session_id': opnameSession.id},
-                                convert: OpnameItem.convert);
-                            downloadOpnameExcel(opnameSession)
-                                .then((fileLocation) {
-                              if (fileLocation == null) {
-                                toastification.show(
-                                  type: ToastificationType.error,
-                                  title: const Text('Failed export excel.'),
-                                  autoCloseDuration: const Duration(seconds: 5),
-                                );
-                              } else {
-                                toastification.show(
-                                  type: ToastificationType.success,
-                                  title: const Text('Success export excel.'),
-                                  description: Tooltip(
-                                      message: 'save at $fileLocation',
-                                      child: Text(
-                                        'save at $fileLocation',
-                                        overflow: TextOverflow.ellipsis,
-                                      )),
-                                  autoCloseDuration: const Duration(seconds: 5),
-                                );
-                              }
-                            });
-                          },
-                          leadingIcon: const Icon(Icons.download),
-                          child: const Text('Export Excel'),
-                        ),
-                        MenuItemButton(
-                          onPressed: () => shareFile(opnameSession),
-                          leadingIcon: const Icon(Icons.share),
-                          child: const Text('Share'),
-                        ),
-                        MenuItemButton(
-                          onPressed: () => _editOpnameSession(opnameSession),
-                          leadingIcon: const Icon(Icons.edit),
-                          child: const Text('edit'),
-                        ),
-                        MenuItemButton(
-                          onPressed: () {
-                            confirmDialog(
-                                    'Apakah yakin hapus opname session ${opnameSession.id}')
-                                .then(
-                              (isConfirmed) {
-                                if (isConfirmed) {
-                                  _deleteOpnameSession(opnameSession);
-                                }
-                              },
+                  menuChildren: [
+                    MenuItemButton(
+                      onPressed: () async {
+                        final orm = Orm(
+                          tableName: OpnameItem.tableName,
+                          pkField: OpnameItem.pkField,
+                          db: db,
+                        );
+                        opnameSession.items = await orm.finds<OpnameItem>(
+                          filter: {'opname_session_id': opnameSession.id},
+                          convert: OpnameItem.convert,
+                        );
+                        downloadOpnameExcel(opnameSession).then((fileLocation) {
+                          if (fileLocation == null) {
+                            toastification.show(
+                              type: ToastificationType.error,
+                              title: const Text('Failed export excel.'),
+                              autoCloseDuration: const Duration(seconds: 5),
                             );
-                          },
-                          leadingIcon: const Icon(Icons.delete),
-                          child: const Text('Delete'),
-                        ),
-                      ],
+                          } else {
+                            toastification.show(
+                              type: ToastificationType.success,
+                              title: const Text('Success export excel.'),
+                              description: Tooltip(
+                                message: 'save at $fileLocation',
+                                child: Text(
+                                  'save at $fileLocation',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              autoCloseDuration: const Duration(seconds: 5),
+                            );
+                          }
+                        });
+                      },
+                      leadingIcon: const Icon(Icons.download),
+                      child: const Text('Export Excel'),
                     ),
-                  ))
-              .toList()),
+                    MenuItemButton(
+                      onPressed: () => shareFile(opnameSession),
+                      leadingIcon: const Icon(Icons.share),
+                      child: const Text('Share'),
+                    ),
+                    MenuItemButton(
+                      onPressed: () => _editOpnameSession(opnameSession),
+                      leadingIcon: const Icon(Icons.edit),
+                      child: const Text('edit'),
+                    ),
+                    MenuItemButton(
+                      onPressed: () {
+                        confirmDialog(
+                          'Apakah yakin hapus opname session ${opnameSession.id}',
+                        ).then((isConfirmed) {
+                          if (isConfirmed) {
+                            _deleteOpnameSession(opnameSession);
+                          }
+                        });
+                      },
+                      leadingIcon: const Icon(Icons.delete),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
+      ),
     );
   }
 
   void _editOpnameSession(opnameSession) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => Provider<Database>.value(
-          value: db,
-          child: OpnameSessionFormPage(
-            opnameSession: opnameSession,
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => Provider<Database>.value(
+              value: db,
+              child: OpnameSessionFormPage(opnameSession: opnameSession),
+            ),
           ),
-        ),
-      ),
-    );
+        )
+        .whenComplete(() => setState(() {}));
   }
 
   void _deleteOpnameSession(OpnameSession opnameSession) {
     _deleteOpnameItems(opnameSession);
     final orm = Orm(
-        tableName: OpnameSession.tableName,
-        pkField: OpnameSession.pkField,
-        db: db);
-    orm.deleteById(opnameSession.id).then(
-        (value) => setState(() {
-              opnameSessions.remove(opnameSession);
-            }),
-        onError: (error) => toastification.show(
-              type: ToastificationType.error,
-              title: Text(
-                  'Failed remove Opname Session at ${opnameSession.updatedAt.formatDate()}.'),
-              autoCloseDuration: const Duration(seconds: 5),
-            ));
+      tableName: OpnameSession.tableName,
+      pkField: OpnameSession.pkField,
+      db: db,
+    );
+    orm
+        .deleteById(opnameSession.id)
+        .then(
+          (value) => setState(() {
+            opnameSessions.remove(opnameSession);
+          }),
+          onError: (error) => toastification.show(
+            type: ToastificationType.error,
+            title: Text(
+              'Failed remove Opname Session at ${opnameSession.updatedAt.formatDate()}.',
+            ),
+            autoCloseDuration: const Duration(seconds: 5),
+          ),
+        );
   }
 
   void _deleteOpnameItems(OpnameSession opnameSession) {
     final orm = Orm(
-        tableName: OpnameItem.tableName, pkField: OpnameItem.pkField, db: db);
-    orm.deleteAll(where: 'opname_session_id = ?', whereArgs: [
-      opnameSession.id
-    ]).then(
-        (value) => setState(() {
-              opnameSession.items = [];
-            }),
-        onError: (error) => toastification.show(
-              type: ToastificationType.error,
-              title: Text(
-                  'Failed remove Opname items from opname session at ${opnameSession.updatedAt.formatDate()}.'),
-              autoCloseDuration: const Duration(seconds: 5),
-            ));
+      tableName: OpnameItem.tableName,
+      pkField: OpnameItem.pkField,
+      db: db,
+    );
+    orm
+        .deleteAll(
+          where: 'opname_session_id = ?',
+          whereArgs: [opnameSession.id],
+        )
+        .then(
+          (value) => setState(() {
+            opnameSession.items = [];
+          }),
+          onError: (error) => toastification.show(
+            type: ToastificationType.error,
+            title: Text(
+              'Failed remove Opname items from opname session at ${opnameSession.updatedAt.formatDate()}.',
+            ),
+            autoCloseDuration: const Duration(seconds: 5),
+          ),
+        );
   }
 }
